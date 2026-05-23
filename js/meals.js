@@ -227,8 +227,8 @@ function openFoodSheet() {
   });
 
   document.getElementById('sheetBody').innerHTML = html;
-  document.getElementById('sheetOverlay').classList.add('show');
-  document.getElementById('sheet').classList.add('show');
+  document.getElementById('sheetOverlay').classList.add('open');
+  document.getElementById('sheet').classList.add('open');
 }
 
 function addFood(foodId) {
@@ -244,8 +244,8 @@ function addFood(foodId) {
 }
 
 function closeSheet() {
-  document.getElementById('sheetOverlay').classList.remove('show');
-  document.getElementById('sheet').classList.remove('show');
+  document.getElementById('sheetOverlay').classList.remove('open');
+  document.getElementById('sheet').classList.remove('open');
 }
 
 /* ---------- SUGGERIMENTI CONTESTUALI ---------- */
