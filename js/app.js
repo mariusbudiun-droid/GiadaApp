@@ -119,10 +119,12 @@ function renderHeader() {
   if (h>=12 && h<18) e = 'buon pomeriggio';
   else if (h>=18) e = 'buonasera';
   else if (h<6) e = 'è ancora notte';
-  document.getElementById('hdrEyebrow').textContent = e + ', Giada';
+  const titleEl = document.getElementById('hdrTitle');
+  if (titleEl) titleEl.textContent = e + ', Giada';
   const M = ['gennaio','febbraio','marzo','aprile','maggio','giugno','luglio','agosto','settembre','ottobre','novembre','dicembre'];
+  const D = ['domenica','lunedì','martedì','mercoledì','giovedì','venerdì','sabato'];
   const n = new Date();
-  document.getElementById('hdrSub').textContent = n.getDate()+' '+M[n.getMonth()]+' '+n.getFullYear();
+  document.getElementById('hdrEyebrow').textContent = D[n.getDay()] + ' ' + n.getDate() + ' ' + M[n.getMonth()];
 }
 
 /* ---------- HOME ---------- */
