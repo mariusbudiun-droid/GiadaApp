@@ -1,0 +1,279 @@
+<!doctype html>
+<html lang="it" data-palette="calda" data-mode="auto">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1">
+  <meta name="theme-color" content="#FBF7F2">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Giada">
+  <meta name="mobile-web-app-capable" content="yes">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/svg+xml" href="icons/icon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+  <link rel="apple-touch-icon" href="icons/icon-180.png">
+  <link rel="stylesheet" href="css/themes.css">
+  <link rel="stylesheet" href="css/base.css">
+  <title>Giada Companion</title>
+</head>
+<body>
+
+<!-- ============== HEADER ============== -->
+<header class="hdr">
+  <div class="hdr-eyebrow" id="hdrEyebrow">buongiorno, Giada</div>
+  <div class="hdr-sub" id="hdrSub"></div>
+</header>
+
+<!-- ============== UPDATE BANNER ============== -->
+<div class="update-banner" id="updateBanner">
+  <span>Aggiornamento disponibile</span>
+  <button onclick="applyUpdate()">Aggiorna</button>
+</div>
+
+<!-- ============== MAIN ============== -->
+<main>
+
+  <!-- ----- HOME ----- -->
+  <section class="section active" id="sec-home">
+    <div class="greet">
+      <div class="greet-quote" id="dayQuote">"Un pasto alla volta. Stai facendo benissimo."</div>
+      <div class="greet-progress" id="dayProgress">0 di 6 pasti registrati</div>
+    </div>
+
+    <div class="card-eyebrow">pasti di oggi</div>
+    <div class="pills" id="dayPills"></div>
+
+    <div class="card-eyebrow">misurazioni di oggi</div>
+    <div class="metrics">
+      <div class="metric">
+        <div class="metric-label">digiuno</div>
+        <div class="metric-value empty" id="m-digiuno">—</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">dopo colazione</div>
+        <div class="metric-value empty" id="m-colazione">—</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">dopo pranzo</div>
+        <div class="metric-value empty" id="m-pranzo">—</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">dopo cena</div>
+        <div class="metric-value empty" id="m-cena">—</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">chetoni</div>
+        <div class="metric-value empty" id="m-chetoni">—</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">orario misurazioni</div>
+        <div class="metric-value" id="m-timing">1h</div>
+      </div>
+    </div>
+
+    <div class="order-card">
+      <div class="order-title">L'ordine giusto a tavola</div>
+      <div class="order-steps">
+        <div class="order-step"><span class="order-num">1</span>verdure</div>
+        <div class="order-step"><span class="order-num">2</span>proteine</div>
+        <div class="order-step"><span class="order-num">3</span>carboidrati</div>
+      </div>
+      <div class="order-note">Mangiare in quest'ordine aiuta a tenere la glicemia stabile dopo il pasto.</div>
+    </div>
+  </section>
+
+  <!-- ----- PASTI ----- -->
+  <section class="section" id="sec-pasti">
+    <div id="mealList">
+      <div class="card-eyebrow">scegli il pasto da registrare</div>
+      <div class="meal-grid" id="mealGrid"></div>
+    </div>
+
+    <div id="mealDetail" class="hidden">
+      <button class="back-btn" onclick="closeMealDetail()">‹ Indietro</button>
+      <div class="meal-detail-head">
+        <div class="meal-detail-eyebrow" id="mealDetailEyebrow"></div>
+        <h2 class="meal-detail-title" id="mealDetailTitle"></h2>
+      </div>
+      <div id="mealSlots"></div>
+      <button class="primary-btn" id="saveMealBtn" onclick="saveMeal()">Salva pasto</button>
+    </div>
+  </section>
+
+  <!-- ----- MISURAZIONI ----- -->
+  <section class="section" id="sec-misurazioni">
+    <div class="card-eyebrow">timing di oggi</div>
+    <div class="timing-row">
+      <button class="timing-opt" data-t="1" onclick="setTiming(1)">1 ora dopo</button>
+      <button class="timing-opt" data-t="2" onclick="setTiming(2)">2 ore dopo</button>
+    </div>
+    <div class="muted small">Si misura alternativamente a 1h o 2h dall'inizio del pasto. Cambia se serve.</div>
+
+    <div class="meas-tabs">
+      <button class="meas-tab active" data-mtab="glicemia" onclick="switchMeasTab('glicemia')">Glicemia</button>
+      <button class="meas-tab" data-mtab="chetoni" onclick="switchMeasTab('chetoni')">Chetoni</button>
+    </div>
+
+    <!-- GLICEMIA -->
+    <div id="measGlicemia">
+      <div id="glucPicker">
+        <div class="card-eyebrow">cosa misuri ora?</div>
+        <div class="gluc-grid">
+          <button class="gluc-pick" onclick="openGluc('digiuno')">
+            <div class="gluc-pick-title">A digiuno</div>
+            <div class="gluc-pick-sub" id="lblDigiuno">al risveglio</div>
+          </button>
+          <button class="gluc-pick" onclick="openGluc('colazione')">
+            <div class="gluc-pick-title">Dopo colazione</div>
+            <div class="gluc-pick-sub" id="lblColazione">1h dal pasto</div>
+          </button>
+          <button class="gluc-pick" onclick="openGluc('pranzo')">
+            <div class="gluc-pick-title">Dopo pranzo</div>
+            <div class="gluc-pick-sub" id="lblPranzo">1h dal pasto</div>
+          </button>
+          <button class="gluc-pick" onclick="openGluc('cena')">
+            <div class="gluc-pick-title">Dopo cena</div>
+            <div class="gluc-pick-sub" id="lblCena">1h dal pasto</div>
+          </button>
+        </div>
+      </div>
+
+      <div id="glucInput" class="hidden">
+        <button class="back-btn" onclick="closeGluc()">‹ Indietro</button>
+        <div class="card">
+          <div class="card-eyebrow">stai misurando</div>
+          <div class="card-title" id="glucKindLabel"></div>
+          <div class="muted small" id="glucTimingLabel"></div>
+
+          <div class="input-block">
+            <label>Valore (mg/dL)</label>
+            <input type="number" inputmode="numeric" id="glucValue" placeholder="es. 95" min="40" max="400">
+          </div>
+
+          <div class="gluc-feedback" id="glucFeedback">
+            <span class="gluc-fb-icon" id="glucFbIcon"></span>
+            <span class="gluc-fb-text" id="glucFbText"></span>
+          </div>
+
+          <button class="link-btn" onclick="toggleNote('glucNote')">Aggiungi nota</button>
+          <div class="note-block" id="glucNote">
+            <textarea id="glucNoteText" placeholder="(facoltativo) es: notte agitata, stress, sport leggero…"></textarea>
+          </div>
+
+          <button class="primary-btn" id="saveGlucBtn" onclick="saveGluc()" disabled>Salva misurazione</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- CHETONI -->
+    <div id="measChetoni" class="hidden">
+      <div class="card">
+        <div class="card-eyebrow">chetoni urinari</div>
+        <div class="card-title">Risultato dello stick</div>
+        <div class="muted small">Tocca il risultato che vedi sullo stick.</div>
+
+        <div class="keto-grid" id="ketoGrid">
+          <button class="keto-chip" data-v="0">Negativo</button>
+          <button class="keto-chip" data-v="5">Tracce</button>
+          <button class="keto-chip" data-v="15">+</button>
+          <button class="keto-chip" data-v="40">++</button>
+          <button class="keto-chip" data-v="80">+++</button>
+          <button class="keto-chip" data-v="160">++++</button>
+        </div>
+
+        <div class="gluc-feedback" id="ketoFeedback">
+          <span class="gluc-fb-icon" id="ketoFbIcon"></span>
+          <span class="gluc-fb-text" id="ketoFbText"></span>
+        </div>
+
+        <button class="link-btn" onclick="toggleNote('ketoNote')">Aggiungi nota</button>
+        <div class="note-block" id="ketoNote">
+          <textarea id="ketoNoteText" placeholder="(facoltativo) es: cena leggera ieri, poca acqua…"></textarea>
+        </div>
+
+        <button class="primary-btn" id="saveKetoBtn" onclick="saveKeto()" disabled>Salva misurazione</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ----- DIARIO ----- -->
+  <section class="section" id="sec-diario">
+    <div class="card-eyebrow">diario</div>
+    <div id="diaryContent"></div>
+  </section>
+
+  <!-- ----- STATS ----- -->
+  <section class="section" id="sec-stats">
+    <div class="card-eyebrow">come va</div>
+    <div id="statsContent"></div>
+  </section>
+
+  <!-- ----- IMPOSTAZIONI ----- -->
+  <section class="section" id="sec-set">
+    <div class="card-eyebrow">impostazioni</div>
+    <div id="settingsContent"></div>
+  </section>
+
+</main>
+
+<!-- ============== TAB BAR ============== -->
+<nav class="tabbar">
+  <button class="tab active" data-tab="home" onclick="goTo('home')">
+    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 11l9-7 9 7v10a1 1 0 01-1 1h-5v-7h-6v7H4a1 1 0 01-1-1V11z" stroke-linejoin="round"/></svg>
+    <span>Home</span>
+  </button>
+  <button class="tab" data-tab="pasti" onclick="goTo('pasti')">
+    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 3v18M5 13c2 0 3-2 3-5s-1-5-3-5M19 3v18M16 3v6c0 1 1 2 3 2"/></svg>
+    <span>Pasti</span>
+  </button>
+  <button class="tab" data-tab="misurazioni" onclick="goTo('misurazioni')">
+    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+    <span>Misurazioni</span>
+  </button>
+  <button class="tab" data-tab="diario" onclick="goTo('diario')">
+    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 4h12a2 2 0 012 2v14l-3-2-3 2-3-2-3 2-3-2V6a2 2 0 012-2z"/><path d="M9 9h6M9 13h4"/></svg>
+    <span>Diario</span>
+  </button>
+  <button class="tab" data-tab="stats" onclick="goTo('stats')">
+    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>
+    <span>Stats</span>
+  </button>
+  <button class="tab" data-tab="set" onclick="goTo('set')">
+    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.8-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1.1-1.5 1.7 1.7 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.8 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1.1 1.7 1.7 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.8.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.8V9a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z"/></svg>
+    <span>Più</span>
+  </button>
+</nav>
+
+<!-- ============== SHEET (per slot pasto) ============== -->
+<div class="sheet-overlay" id="sheetOverlay" onclick="closeSheet()"></div>
+<div class="sheet" id="sheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-head">
+    <div class="sheet-title" id="sheetTitle"></div>
+    <div class="sheet-sub" id="sheetSub"></div>
+  </div>
+  <div class="sheet-body" id="sheetBody"></div>
+</div>
+
+<!-- ============== CONFIRM DIALOG ============== -->
+<div class="confirm-overlay" id="confirmOverlay">
+  <div class="confirm-box">
+    <div class="confirm-title" id="confirmTitle"></div>
+    <div class="confirm-msg" id="confirmMsg"></div>
+    <div class="confirm-actions">
+      <button class="confirm-cancel" onclick="closeConfirm()">Annulla</button>
+      <button class="confirm-yes" id="confirmYes">Conferma</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============== TOAST ============== -->
+<div class="toast" id="toast"></div>
+
+<!-- ============== SCRIPTS ============== -->
+<script src="js/data.js"></script>
+<script src="js/app.js"></script>
+<script src="js/meals.js"></script>
+<script src="js/ui.js"></script>
+</body>
+</html>
