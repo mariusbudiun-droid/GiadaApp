@@ -508,3 +508,120 @@ input[type="number"] { -moz-appearance: textfield; }
 /* MEAL DETAIL header */
 .meal-detail-head { margin: 4px 0 14px; }
 .meal-detail-title { font-size: 28px; margin-top: 2px; }
+
+/* ============== MEAL ITEMS (composizione libera) ============== */
+.empty-meal {
+  text-align: center; padding: 32px 16px;
+  color: var(--text-medium); font-size: 14px;
+  background: var(--surface); border-radius: 14px;
+  border: 1px dashed var(--border);
+  margin-bottom: 16px;
+}
+.empty-meal-emoji { font-size: 36px; margin-bottom: 8px; opacity: .5; }
+
+.meal-items { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
+.meal-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 12px 12px 12px 14px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 14px;
+}
+.meal-item-main { flex: 1 1 auto; min-width: 0; }
+.meal-item-name { font-size: 14px; font-weight: 600; color: var(--text-dark); line-height: 1.3; }
+.meal-item-tip { font-size: 11px; color: var(--text-medium); margin-top: 3px; line-height: 1.3; }
+.meal-item-tip.warn { color: var(--warn-text); }
+.meal-item-qty {
+  display: flex; align-items: center; gap: 4px;
+  background: var(--bg); border-radius: 18px;
+  padding: 2px;
+}
+.qty-btn {
+  width: 30px; height: 30px; border-radius: 50%;
+  background: var(--surface); border: 1px solid var(--border);
+  font-size: 18px; font-weight: 500; color: var(--accent-dark);
+  display: flex; align-items: center; justify-content: center;
+  line-height: 1;
+}
+.qty-btn:active { background: var(--accent-soft); }
+.qty-val {
+  min-width: 50px; text-align: center;
+  font-family: var(--mono); font-size: 13px; font-weight: 600;
+  color: var(--text-dark); padding: 0 4px;
+}
+.qty-unit { font-size: 10px; color: var(--text-medium); margin-left: 2px; font-weight: 500; }
+.meal-item-del {
+  width: 28px; height: 28px; border-radius: 50%;
+  background: transparent; border: none;
+  color: var(--text-light); font-size: 14px;
+  flex-shrink: 0;
+}
+.meal-item-del:active { background: var(--accent-soft); color: var(--accent-dark); }
+
+.add-item-btn {
+  width: 100%; padding: 14px;
+  background: var(--accent-soft); border: 2px dashed var(--accent);
+  border-radius: 14px;
+  color: var(--accent-dark); font-size: 15px; font-weight: 600;
+  margin-top: 4px;
+  transition: all .15s;
+}
+.add-item-btn:active { background: var(--accent); color: #fff; transform: scale(.99); }
+
+.meal-tip {
+  padding: 10px 12px; border-radius: 12px;
+  font-size: 13px; line-height: 1.4;
+  margin: 10px 0 4px;
+}
+.meal-tip.warn { background: var(--warn-bg); color: var(--warn-text); border: 1px solid var(--warn-border); }
+.meal-tip.info { background: var(--accent-soft); color: var(--accent-dark); }
+
+.autosave-hint {
+  text-align: center; color: var(--text-light);
+  font-size: 11px; font-style: italic;
+  margin-top: 18px; opacity: .7;
+}
+
+/* ============== MEAL TILES (lista pasti) ============== */
+.meal-tile {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 16px; padding: 14px 14px 12px;
+  text-align: left; margin-bottom: 10px;
+  width: 100%; display: block;
+  transition: all .15s;
+}
+.meal-tile:active { transform: scale(.99); background: var(--paper); }
+.meal-tile.done { border-color: var(--accent-soft); background: linear-gradient(180deg, var(--surface) 0%, var(--accent-soft) 100%); }
+.meal-tile-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
+.meal-tile-icon { font-size: 18px; }
+.meal-tile-time { font-size: 11px; color: var(--text-light); font-family: var(--mono); letter-spacing: .04em; }
+.meal-tile-name { font-family: var(--serif); font-size: 18px; font-weight: 500; color: var(--text-dark); margin-bottom: 4px; }
+.meal-tile-preview { font-size: 12px; color: var(--text-medium); line-height: 1.3; }
+.meal-tile-preview.empty { color: var(--text-light); font-style: italic; }
+.meal-grid { display: flex; flex-direction: column; gap: 0; }
+
+/* ============== FOOD SHEET ============== */
+.sugg-box {
+  background: var(--accent-soft); border-radius: 12px;
+  padding: 10px 12px; margin-bottom: 14px;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.sugg-row { display: flex; gap: 8px; font-size: 13px; color: var(--accent-dark); line-height: 1.4; }
+.sugg-ico { flex-shrink: 0; }
+
+.food-cat {
+  font-family: var(--serif); font-style: italic; font-size: 13px;
+  color: var(--accent-dark); margin: 14px 0 6px;
+  letter-spacing: .02em;
+}
+.food-cat:first-child { margin-top: 0; }
+.food-list { display: flex; flex-direction: column; gap: 6px; }
+.food-opt {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 12px; padding: 10px 12px;
+  text-align: left; width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  transition: all .12s;
+}
+.food-opt:active { background: var(--accent-soft); border-color: var(--accent-soft); transform: scale(.99); }
+.food-opt.in { background: var(--accent-soft); border-color: var(--accent-soft); }
+.food-opt-name { font-size: 14px; color: var(--text-dark); flex: 1; }
+.food-opt-qty { font-size: 11px; color: var(--text-medium); font-family: var(--mono); flex-shrink: 0; }
