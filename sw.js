@@ -1,7 +1,7 @@
 /* Giada Companion - Service Worker
    Per forzare aggiornamento: incrementa CACHE_VERSION */
 'use strict';
-const CACHE_VERSION = 'giada-v1.0.2';
+const CACHE_VERSION = 'giada-v1.1.0';
 const ASSETS = [
   './',
   './index.html',
