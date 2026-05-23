@@ -4,6 +4,9 @@
    ========================================================= */
 'use strict';
 
+const APP_VERSION = '1.1.1';
+console.log('%c GIADA · v' + APP_VERSION + ' ', 'background:#7A9978;color:white;padding:4px 8px;border-radius:4px;font-weight:bold;');
+
 /* ---------- STORAGE ---------- */
 const STORAGE_KEY = 'giada_data_v1';
 const THEME_KEY = 'giada_theme_v1';
@@ -125,6 +128,8 @@ function renderHeader() {
   const D = ['domenica','lunedì','martedì','mercoledì','giovedì','venerdì','sabato'];
   const n = new Date();
   document.getElementById('hdrEyebrow').textContent = D[n.getDay()] + ' ' + n.getDate() + ' ' + M[n.getMonth()];
+  const vEl = document.getElementById('hdrVersion');
+  if (vEl) vEl.textContent = 'v' + APP_VERSION;
 }
 
 /* ---------- HOME ---------- */

@@ -317,7 +317,7 @@ function renderSettings() {
     <button class="set-row" onclick="confirmReset()"><div><div class="set-row-label" style="color:var(--alert-text)">Cancella tutti i dati</div><div class="set-row-sub">Non si può annullare</div></div><span style="color:var(--alert-text)">›</span></button>
 
     <div class="muted center" style="margin-top:20px;font-size:12px;">Tutti i dati restano solo sul tuo telefono.<br>Niente cloud, niente account.</div>
-    <div class="muted center" style="margin-top:6px;font-size:11px;">Companion v1.0 · creato con cura</div>
+    <div class="muted center" style="margin-top:6px;font-size:11px;">Giada v${APP_VERSION} · creato con cura</div>
   `;
 }
 
