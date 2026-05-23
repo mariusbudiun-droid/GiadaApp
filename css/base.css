@@ -625,3 +625,13 @@ input[type="number"] { -moz-appearance: textfield; }
 .food-opt.in { background: var(--accent-soft); border-color: var(--accent-soft); }
 .food-opt-name { font-size: 14px; color: var(--text-dark); flex: 1; }
 .food-opt-qty { font-size: 11px; color: var(--text-medium); font-family: var(--mono); flex-shrink: 0; }
+
+/* ============== VERSION BADGE ============== */
+.hdr-top { display: flex; align-items: center; justify-content: space-between; }
+.hdr-version {
+  font-family: var(--mono); font-size: 10px;
+  color: var(--accent-dark); opacity: .7;
+  background: var(--accent-soft); padding: 3px 7px;
+  border-radius: 8px; letter-spacing: .02em;
+  font-weight: 600;
+}
