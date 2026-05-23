@@ -192,14 +192,25 @@ function renderEntry(e) {
       return `<div class="diary-entry"><div class="diary-time">${fmtTime(e.ts)}</div><div class="diary-body"><div class="diary-kind">chetoni</div><div class="diary-content"><span class="diary-value">${ketoLabel(e.value)}</span></div>${e.note ? `<div class="diary-note">"${escapeHtml(e.note)}"</div>` : ''}</div><button class="diary-del" onclick="confirmDelMeas('${e.id}')">×</button></div>`;
     }
   } else {
-    const m = DB.meals.find(x => x.id === e.mealId);
-    const items = Object.values(e.choices || {}).map(c => {
-      let s = c.name;
-      if (c.count) s += ` (${c.count} ${c.unit || ''})`;
-      else if (c.g != null) s += ` (${c.g}g)`;
-      return s;
-    });
-    return `<div class="diary-entry"><div class="diary-time">${fmtTime(e.ts)}</div><div class="diary-body"><div class="diary-kind">${m ? m.name : 'pasto'}</div><div class="diary-content" style="font-size:13px;">${items.join(' · ')}</div></div><button class="diary-del" onclick="confirmDelMeal('${e.id}')">×</button></div>`;
+    const slot = SLOT_BY_ID[e.mealId];
+    // nuova struttura: items[]
+    let items = [];
+    if (e.items && e.items.length) {
+      items = e.items.map(it => {
+        const f = FOOD_BY_ID[it.foodId];
+        if (!f) return null;
+        return `${f.name} (${it.qty}${f.unit})`;
+      }).filter(Boolean);
+    } else if (e.choices) {
+      // backward-compat con vecchie voci
+      items = Object.values(e.choices).map(c => {
+        let s = c.name;
+        if (c.count) s += ` (${c.count} ${c.unit || ''})`;
+        else if (c.g != null) s += ` (${c.g}g)`;
+        return s;
+      });
+    }
+    return `<div class="diary-entry"><div class="diary-time">${fmtTime(e.ts)}</div><div class="diary-body"><div class="diary-kind">${slot ? slot.name : 'pasto'}</div><div class="diary-content" style="font-size:13px;">${items.join(' · ')}</div></div><button class="diary-del" onclick="confirmDelMeal('${e.id}')">×</button></div>`;
   }
 }
 
@@ -378,15 +389,23 @@ function exportDiarioTxt() {
         if (e.note) txt += `  · nota: ${e.note}`;
         txt += '\n';
       } else {
-        const m = DB.meals.find(x => x.id === e.mealId);
-        txt += `${t}  ${m ? m.name : 'Pasto'}:\n`;
-        Object.values(e.choices || {}).forEach(c => {
-          let l = '    · ' + c.name;
-          if (c.count) l += ` ${c.count} ${c.unit || ''}`;
-          else if (c.g != null) l += ` ${c.g}g`;
-          if (c.extra) l += ' ' + c.extra;
-          txt += l + '\n';
-        });
+        const slot = SLOT_BY_ID[e.mealId];
+        txt += `${t}  ${slot ? slot.name : 'Pasto'}:\n`;
+        if (e.items && e.items.length) {
+          e.items.forEach(it => {
+            const f = FOOD_BY_ID[it.foodId];
+            if (!f) return;
+            txt += `    · ${f.name} ${it.qty}${f.unit}\n`;
+          });
+        } else if (e.choices) {
+          Object.values(e.choices).forEach(c => {
+            let l = '    · ' + c.name;
+            if (c.count) l += ` ${c.count} ${c.unit || ''}`;
+            else if (c.g != null) l += ` ${c.g}g`;
+            if (c.extra) l += ' ' + c.extra;
+            txt += l + '\n';
+          });
+        }
       }
     });
     txt += '\n';

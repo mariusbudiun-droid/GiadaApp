@@ -145,15 +145,17 @@ function renderHome() {
   const tms = DATA.measurements.filter(m => dateOf(m.ts) === today);
   const grid = document.getElementById('dayPills');
   grid.innerHTML = '';
-  DB.meals.forEach(m => {
-    const done = tm.some(x => x.mealId === m.id);
+  SLOTS.forEach(slot => {
+    const entry = tm.find(x => x.mealId === slot.id);
+    const hasItems = entry && ((entry.items && entry.items.length) || (entry.choices && Object.keys(entry.choices).length));
     const el = document.createElement('div');
-    el.className = 'pill' + (done ? ' done' : '');
-    const sn = { colazione:'Colazione', spuntino_matt:'Spuntino', pranzo:'Pranzo', merenda:'Merenda', cena:'Cena', spuntino_notturno:'Notturno' }[m.id];
-    el.innerHTML = `<div class="pill-name">${sn}</div><div class="pill-state">${done ? '✓' : '·'}</div>`;
+    el.className = 'pill' + (hasItems ? ' done' : '');
+    const sn = { colazione:'Colazione', spuntino_matt:'Spuntino', pranzo:'Pranzo', merenda:'Merenda', cena:'Cena', spuntino_notturno:'Notturno' }[slot.id];
+    el.innerHTML = `<div class="pill-name">${sn}</div><div class="pill-state">${hasItems ? '✓' : '·'}</div>`;
     grid.appendChild(el);
   });
-  const doneCount = tm.reduce((a,m) => { a.add(m.mealId); return a; }, new Set()).size;
+  const doneCount = tm.filter(m => (m.items && m.items.length) || (m.choices && Object.keys(m.choices).length))
+    .reduce((a,m) => { a.add(m.mealId); return a; }, new Set()).size;
   document.getElementById('dayProgress').textContent = doneCount+' di 6 pasti registrati';
   document.getElementById('dayQuote').textContent = '"' + dailyQuotes[new Date().getDate() % dailyQuotes.length] + '"';
 

@@ -1,275 +1,228 @@
 /* =========================================================
-   GIADA · Database della dieta
-   Estratto dalla dieta AUSL Pescara - Dr.ssa Gambacorta
+   GIADA · Catalogo alimenti (dieta AUSL Pescara)
+   Ogni alimento è scegliibile liberamente nei pasti compatibili.
+   slots: dove può comparire
+     'colaz' = colazione
+     'spunt' = spuntino mattutino, merenda, spuntino notturno
+     'pasto' = pranzo o cena
+   cat: categoria semantica (per raggruppare e suggerire)
+   qty: quantità di default in g/ml/pz
+   step: incremento dei tasti +/-
    ========================================================= */
-const DB = {
-  meals: [
-    { id: 'colazione', name: 'Colazione', time: '07:00 — 08:00', slots: ['liquido','yogurt_colaz','cereali_colaz','pane_colaz'] },
-    { id: 'spuntino_matt', name: 'Spuntino mattutino', time: 'metà mattina', slots: ['spuntino'], single: true },
-    { id: 'pranzo', name: 'Pranzo', time: '12:30 — 14:00', slots: ['primo','secondo_pranzo','verdura','olio_p','frutta_p'] },
-    { id: 'merenda', name: 'Merenda', time: 'metà pomeriggio', slots: ['pane_mer','condimento_mer','salume_mer','pomodori_mer'] },
-    { id: 'cena', name: 'Cena', time: '19:30 — 20:30', slots: ['secondo_cena','verdura_c','olio_c','carbo_cena','frutta_c'] },
-    { id: 'spuntino_notturno', name: 'Spuntino notturno', time: 'prima di dormire', slots: ['spunt_nott'], single: true }
-  ],
-  slots: {
-    liquido: { label: 'Bevanda', optional: false },
-    yogurt_colaz: { label: 'Yogurt', optional: true },
-    cereali_colaz: { label: 'Frutta secca o granola', optional: true },
-    pane_colaz: { label: 'Cereali o pane', optional: false },
-    spuntino: { label: 'Spuntino', optional: false },
-    primo: { label: 'Primo piatto', optional: false },
-    secondo_pranzo: { label: 'Secondo piatto', optional: true, note: 'Con pasta di legumi non serve.' },
-    verdura: { label: 'Verdura', optional: false },
-    olio_p: { label: "Olio EVO", optional: false, fixed: { name: "Olio extra vergine d'oliva", g: 20, hint: '2 cucchiai da tavola' } },
-    frutta_p: { label: 'Frutta', optional: true, note: 'Toglierla se le glicemie sono alte.' },
-    pane_mer: { label: 'Pane', optional: false },
-    condimento_mer: { label: 'Olio EVO', optional: false, fixed: { name: "Olio extra vergine d'oliva", g: 10, hint: '1 cucchiaio' } },
-    salume_mer: { label: 'Affettato/proteina', optional: false },
-    pomodori_mer: { label: 'Pomodori', optional: false, fixed: { name: 'Pomodori maturi', g: 100 } },
-    secondo_cena: { label: 'Secondo piatto', optional: false },
-    verdura_c: { label: 'Verdura', optional: false },
-    olio_c: { label: 'Olio EVO', optional: false, fixed: { name: "Olio extra vergine d'oliva", g: 20, hint: '2 cucchiai per tutta la cena' } },
-    carbo_cena: { label: 'Pane o sostituto', optional: false },
-    frutta_c: { label: 'Frutta', optional: true, note: 'Toglierla se le glicemie sono alte.' },
-    spunt_nott: { label: 'Spuntino', optional: false, note: 'Fondamentale per evitare i chetoni la mattina dopo.' }
-  },
-  options: {
-    liquido: [
-      { name: "Caffè (no zucchero/miele)", g: 50 },
-      { name: "Caffè d'orzo", g: 50 },
-      { name: 'Tisana', g: 200 },
-      { name: 'Tè', g: 200 }
-    ],
-    yogurt_colaz: [{ name: 'Yogurt greco naturale 2%', g: 150 }],
-    cereali_colaz: [{ name: 'Noci o granola senza zuccheri', g: 20 }],
-    pane_colaz: [
-      { name: 'Oro Saiwa integrali fibrattiva', count: 6, unit: 'biscotti' },
-      { name: 'Fette biscottate integrali', count: 4, unit: 'fette' },
-      { name: 'Pane integrale (colazione salata)', g: 60, tags: ['Con 50g affettato magro o 1 uovo + verdura'] },
-      { name: 'Pan bauletto integrale (colazione salata)', g: 50, count: 2, unit: 'fette', tags: ['Con 50g affettato magro o 1 uovo + verdura'] }
-    ],
-    spuntino: [
-      { name: 'Cracker integrali + grana', g: 25, extra: '+ grana 30g' },
-      { name: 'Pesca / Fragole / Arance / Pere', g: 150 },
-      { name: 'Mele / Ciliege', g: 100 },
-      { name: 'Crostini integrali con philadelphia', g: 30, extra: '+ philadelphia 40g' },
-      { name: 'Frutta secca', g: 25, range: '20-30g' },
-      { name: 'Lupini / Olive', g: 100 },
-      { name: 'Yogurt Fage Trublend senza zucchero', g: 150 }
-    ],
-    primo: [
-      { section: 'Pasta e cereali', items: [
-        { name: 'Pasta di semola', g: 80, preferred: true },
-        { name: 'Pasta di semola integrale', g: 100 },
-        { name: "Pasta all'uovo fresca", g: 100 },
-        { name: "Pasta all'uovo secca", g: 80 },
-        { name: 'Farro', g: 90, preferred: true },
-        { name: 'Riso integrale', g: 80 },
-        { name: 'Riso basmati', g: 80 },
-        { name: 'Riso venere', g: 80 },
-        { name: 'Riso parboiled', g: 80 },
-        { name: 'Orzo perlato', g: 90 },
-        { name: 'Pane integrale (al posto del primo)', g: 130 }
-      ]},
-      { section: 'A base di legumi (non serve il secondo)', items: [
-        { name: 'Pasta di ceci / lenticchie / piselli', g: 100, flag: 'no_secondo' },
-        { name: 'Pasta fiberpasta', g: 100, flag: 'no_secondo' },
-        { name: 'Legumotti (per minestre)', g: 100, flag: 'no_secondo' }
-      ]},
-      { section: 'Legumi da aggiungere a 50g pasta/riso o 60g pane integrale', items: [
-        { name: 'Ceci in scatola scolati', g: 160, flag: 'aggiunta', addTo: '50g pasta o 60g pane int' },
-        { name: 'Ceci secchi', g: 50, flag: 'aggiunta', addTo: '50g pasta o 60g pane int' },
-        { name: 'Fagioli borlotti freschi', g: 100, flag: 'aggiunta', addTo: '50g pasta o 60g pane int' },
-        { name: 'Fagioli borlotti secchi', g: 50, flag: 'aggiunta', addTo: '50g pasta o 60g pane int' },
-        { name: 'Fagioli borlotti in scatola scolati', g: 150, flag: 'aggiunta', addTo: '50g pasta o 60g pane int' },
-        { name: 'Lenticchie in scatola scolate', g: 150, flag: 'aggiunta', addTo: '50g pasta o 60g pane int' },
-        { name: 'Lenticchie secche', g: 50, flag: 'aggiunta', addTo: '50g pasta o 60g pane int' },
-        { name: 'Piselli surgelati', g: 180, flag: 'aggiunta', addTo: '50g pasta o 60g pane int' },
-        { name: 'Patate', g: 150, flag: 'aggiunta', addTo: '50g pasta o 60g pane int', warn: 'Max 1 volta al mese' }
-      ]}
-    ],
-    secondo_pranzo: [
-      { section: 'Carni bianche', items: [
-        { name: 'Pollo - petto', g: 80 },
-        { name: 'Tacchino - fesa', g: 80 },
-        { name: 'Coniglio magro', g: 80 },
-        { name: 'Vitello - filetto', g: 80 },
-        { name: 'Vitellone tagli magri', g: 80 }
-      ]},
-      { section: 'Carni rosse e maiale (max 1-2/sett)', items: [
-        { name: 'Maiale - lonza/arista', g: 80, freq: 2 }
-      ]},
-      { section: 'Pesce', items: [
-        { name: 'Merluzzo / nasello', g: 120 },
-        { name: 'Orata fresca', g: 70 },
-        { name: 'Pesce spada', g: 80 },
-        { name: 'Polpo', g: 150 },
-        { name: 'Rana pescatrice', g: 140 },
-        { name: 'Razza', g: 130 },
-        { name: 'Scorfano', g: 100 },
-        { name: 'Seppia', g: 120 },
-        { name: 'Sogliola', g: 100 },
-        { name: 'Spigola', g: 100 },
-        { name: 'Trota', g: 100 },
-        { name: 'Calamaro', g: 130 },
-        { name: 'Dentice', g: 80 },
-        { name: 'Acciuga / alice', g: 90 },
-        { name: 'Tonno in salamoia sgocciolato', g: 80 }
-      ]},
-      { section: 'Pesci più grassi (togliere 1 cucchiaio di olio)', items: [
-        { name: 'Sgombro / maccarello', g: 50, fat: true },
-        { name: 'Tonno fresco', g: 50, fat: true },
-        { name: "Tonno sott'olio sgocciolato", g: 80, fat: true },
-        { name: 'Salmone fresco', g: 80, fat: true }
-      ]},
-      { section: 'Uova, affettati, formaggi (max 1-2/sett)', items: [
-        { name: 'Uova di gallina intere', g: 60, freq: 2 },
-        { name: 'Prosciutto cotto / Tacchino arrosto', g: 60, freq: 2 },
-        { name: 'Ricotta di vacca', g: 100, fat: true, freq: 2 },
-        { name: 'Mozzarella di vacca', g: 60, fat: true, freq: 2 }
-      ]}
-    ],
-    verdura: [
-      { name: 'Pomodori da insalata', g: 200, preferred: true },
-      { name: 'Asparagi di serra', g: 180 },
-      { name: 'Bieta', g: 200 },
-      { name: 'Broccoletti di rapa', g: 250 },
-      { name: 'Broccolo a testa', g: 180 },
-      { name: 'Carciofi', g: 200 },
-      { name: 'Carote', g: 70, careful: 'IG alto, soprattutto cotte' },
-      { name: 'Cavolfiore', g: 200 },
-      { name: 'Cavoli di bruxelles', g: 120 },
-      { name: 'Cetrioli', g: 300 },
-      { name: 'Cicoria da taglio', g: 300 },
-      { name: 'Fagiolini freschi', g: 220 },
-      { name: 'Finocchi', g: 500 },
-      { name: 'Lattuga', g: 230 },
-      { name: 'Melanzane', g: 200 },
-      { name: 'Peperoni', g: 130 },
-      { name: 'Radicchio rosso', g: 300 },
-      { name: 'Rape', g: 140 },
-      { name: 'Rughetta / rucola', g: 150 },
-      { name: 'Scarola', g: 300 },
-      { name: 'Spinaci', g: 200 },
-      { name: 'Zucca gialla', g: 130, careful: 'IG alto' },
-      { name: 'Zucchine', g: 350 }
-    ],
-    frutta_p: [
-      { name: 'Mela', g: 100, preferred: true },
-      { name: 'Pera', g: 150 },
-      { name: 'Pesca', g: 150 },
-      { name: 'Albicocche', g: 120 },
-      { name: 'Arance', g: 150 },
-      { name: 'Ciliege', g: 120 },
-      { name: 'Clementine', g: 150 },
-      { name: 'Fragole', g: 150 },
-      { name: 'Mandaranci', g: 100 },
-      { name: 'Melagrane', g: 80 },
-      { name: 'Prugne', g: 130 },
-      { name: "Fichi-d'india", g: 100 },
-      { section: 'Solo a fine pasto (mai lontano dai pasti)', items: [
-        { name: 'Ananas', g: 130 },
-        { name: 'Banane', g: 80 },
-        { name: 'Cocomero', g: 250 },
-        { name: 'Fichi', g: 80 },
-        { name: 'Kiwi', g: 120 },
-        { name: 'Melone', g: 150 },
-        { name: "Melone d'inverno", g: 250 },
-        { name: 'Nespole', g: 150 },
-        { name: 'Uva', g: 80 }
-      ]},
-      { section: 'Sostituti della frutta', items: [
-        { name: 'Pane integrale (al posto della frutta)', g: 30 },
-        { name: 'Pasta di semola (in più)', g: 20 }
-      ]}
-    ],
-    pane_mer: [
-      { name: 'Pane integrale', g: 60 },
-      { name: 'Pan bauletto integrale', g: 50, count: 2, unit: 'fette' }
-    ],
-    salume_mer: [
-      { name: 'Prosciutto cotto', g: 40 },
-      { name: 'Affettato di tacchino', g: 40 },
-      { name: 'Tonno', g: 40 },
-      { name: 'Philadelphia Protein', g: 40 }
-    ],
-    secondo_cena: [
-      { section: 'Carni bianche', items: [
-        { name: 'Pollo - petto', g: 120 },
-        { name: 'Pollo coscia senza pelle', g: 120 },
-        { name: 'Tacchino - fesa', g: 120 },
-        { name: 'Tacchino coscia senza pelle', g: 120 },
-        { name: 'Coniglio magro', g: 120 },
-        { name: 'Vitello - filetto', g: 120 },
-        { name: 'Vitellone tagli magri', g: 120 }
-      ]},
-      { section: 'Carni rosse e maiale (max 1-2/sett)', items: [
-        { name: 'Maiale - lonza/arista', g: 120, freq: 2 }
-      ]},
-      { section: 'Pesce', items: [
-        { name: 'Merluzzo / nasello', g: 200 },
-        { name: 'Orata fresca', g: 150 },
-        { name: 'Pesce spada', g: 150 },
-        { name: 'Polpo', g: 250 },
-        { name: 'Rana pescatrice', g: 200 },
-        { name: 'Razza', g: 200 },
-        { name: 'Scorfano', g: 150 },
-        { name: 'Seppia', g: 200 },
-        { name: 'Sogliola', g: 200 },
-        { name: 'Spigola', g: 200 },
-        { name: 'Trota', g: 200 },
-        { name: 'Calamaro', g: 200 },
-        { name: 'Dentice', g: 150 },
-        { name: 'Acciuga / alice', g: 130 },
-        { name: 'Tonno in salamoia sgocciolato', g: 120 }
-      ]},
-      { section: 'Pesci più grassi (togliere 1 cucchiaio di olio)', items: [
-        { name: 'Sgombro / maccarello', g: 150, fat: true },
-        { name: 'Tonno fresco', g: 150, fat: true },
-        { name: "Tonno sott'olio sgocciolato", g: 120, fat: true },
-        { name: 'Salmone fresco', g: 150, fat: true },
-        { name: 'Triglia', g: 200, fat: true }
-      ]},
-      { section: 'Uova, affettati, formaggi (max 1-2/sett)', items: [
-        { name: 'Uova di gallina intere', g: 120, freq: 2 },
-        { name: 'Prosciutto cotto magro', g: 100, freq: 2 },
-        { name: 'Petto di pollo a fette al forno', g: 100 },
-        { name: 'Ricotta di vacca', g: 160, fat: true, freq: 2 },
-        { name: 'Mozzarella di vacca', g: 100, fat: true, freq: 2 }
-      ]}
-    ],
-    carbo_cena: [
-      { name: 'Pane integrale', g: 100, preferred: true },
-      { section: 'Paste di legumi', items: [
-        { name: 'Pasta di ceci', g: 65 },
-        { name: 'Pasta di lenticchie', g: 65 },
-        { name: 'Pasta di piselli', g: 65 },
-        { name: 'Legumotti', g: 65 }
-      ]},
-      { section: 'Legumi in scatola/secchi', items: [
-        { name: 'Ceci in scatola scolati', g: 200 },
-        { name: 'Fagioli in scatola scolati', g: 200 },
-        { name: 'Lenticchie in scatola scolate', g: 200 },
-        { name: 'Ceci secchi', g: 65 },
-        { name: 'Lenticchie secche', g: 65 }
-      ]},
-      { section: 'Combinazioni', items: [
-        { name: 'Patate + pane integrale', g: 150, extra: '+ 50g pane integrale', warn: 'Max 1 volta al mese' },
-        { name: 'Pasta/riso in brodo o passato di verdure', g: 60 },
-        { name: 'Castagne + pane', g: 50, extra: '+ 50g pane' },
-        { name: 'Piselli + pane integrale', g: 170, extra: '+ 50g pane integrale' }
-      ]}
-    ],
-    spunt_nott: [
-      { name: 'Gelato confezionato biscotto', g: 50, tags: ["L'unico momento per un dolce"] },
-      { name: 'Pane integrale', g: 50 },
-      { name: 'Ciambellone + latte', g: 50, extra: '+ 1 bicchiere di latte' },
-      { name: 'Crackers integrali', g: 40 },
-      { name: 'Fette biscottate integrali', g: 40 },
-      { name: 'Grissini', g: 40 }
-    ]
-  }
+
+const SLOTS = [
+  { id:'colazione',         name:'Colazione',          time:'07-09',   kind:'colaz', icon:'☕' },
+  { id:'spuntino_matt',     name:'Spuntino mattina',   time:'10-11',   kind:'spunt', icon:'🍎' },
+  { id:'pranzo',            name:'Pranzo',             time:'12:30-14',kind:'pasto', icon:'🍝' },
+  { id:'merenda',           name:'Merenda',            time:'16-17',   kind:'spunt', icon:'🥪' },
+  { id:'cena',              name:'Cena',               time:'19:30-20:30', kind:'pasto', icon:'🥗' },
+  { id:'spuntino_notturno', name:'Spuntino notturno',  time:'prima di dormire', kind:'spunt', icon:'🌙', note:'Entro 8h dalla colazione' }
+];
+
+const CATEGORIES = {
+  bev:           'Bevande',
+  latticino:     'Latticini',
+  cereale:       'Pane, cracker, fette',
+  fruttasecca:   'Frutta secca',
+  primo:         'Primi (pasta, riso, cereali)',
+  piattounico:   'Piatti unici (pasta+legumi)',
+  legume:        'Legumi (con primo)',
+  carnebianca:   'Carni bianche',
+  carnerossa:    'Carni rosse e maiale',
+  pesce:         'Pesce',
+  pescegrasso:   'Pesce grasso (-10g olio)',
+  uovoformaggio: 'Uova, formaggi, affettati',
+  verdura:       'Verdure',
+  frutta:        'Frutta',
+  fruttafinep:   'Frutta solo a fine pasto',
+  salume:        'Affettati magri (merenda)',
+  condimento:    'Condimenti',
+  dolce:         'Dolci (solo sera)'
 };
-// Cena verdure/frutta = stesse opzioni del pranzo
-DB.options.verdura_c = DB.options.verdura;
-DB.options.frutta_c = DB.options.frutta_p;
+
+/* Tutti gli alimenti come array piatto */
+const FOODS = [
+  /* ===== BEVANDE (colazione + spuntini) ===== */
+  { id:'caffe',       name:'Caffè (no zucchero)',           qty:50,  unit:'ml', step:10, slots:['colaz','spunt'], cat:'bev' },
+  { id:'caffeorzo',   name:"Caffè d'orzo",                  qty:50,  unit:'ml', step:10, slots:['colaz','spunt'], cat:'bev' },
+  { id:'te',          name:'Tè',                            qty:200, unit:'ml', step:50, slots:['colaz','spunt'], cat:'bev' },
+  { id:'tisana',      name:'Tisana',                        qty:200, unit:'ml', step:50, slots:['colaz','spunt'], cat:'bev' },
+  { id:'latte',       name:'Latte (con ciambellone)',       qty:200, unit:'ml', step:50, slots:['spunt'],         cat:'bev' },
+
+  /* ===== LATTICINI (colazione + spuntini) ===== */
+  { id:'yogurt_greco',name:'Yogurt greco naturale 2%',      qty:150, unit:'g', step:10, slots:['colaz','spunt'], cat:'latticino', preferred:true },
+  { id:'yogurt_fage', name:'Yogurt Fage Trueblend',         qty:150, unit:'g', step:10, slots:['colaz','spunt'], cat:'latticino' },
+  { id:'philadelphia',name:'Philadelphia Protein',          qty:40,  unit:'g', step:5,  slots:['colaz','spunt'], cat:'latticino' },
+
+  /* ===== PANE / CEREALI (colazione + spuntini + cena come carbo) ===== */
+  { id:'pane_int',    name:'Pane integrale',                qty:50,  unit:'g', step:10, slots:['colaz','spunt','pasto'], cat:'cereale' },
+  { id:'panbauletto', name:'Pan bauletto integrale (1 fetta)', qty:25,unit:'g', step:25, slots:['colaz','spunt','pasto'], cat:'cereale' },
+  { id:'orosaiwa',    name:'Oro Saiwa Fibrattiva (1 biscotto)', qty:1, unit:'pz', step:1, slots:['colaz'],       cat:'cereale' },
+  { id:'fette_int',   name:'Fette biscottate integrali (1 fetta)', qty:1, unit:'pz', step:1, slots:['colaz','spunt'], cat:'cereale' },
+  { id:'cracker_int', name:'Cracker integrali',             qty:25,  unit:'g', step:5,  slots:['spunt'],         cat:'cereale' },
+  { id:'grissini',    name:'Grissini',                      qty:40,  unit:'g', step:5,  slots:['spunt'],         cat:'cereale' },
+  { id:'crostini',    name:'Crostini integrali',            qty:30,  unit:'g', step:5,  slots:['spunt'],         cat:'cereale' },
+
+  /* ===== FRUTTA SECCA ===== */
+  { id:'noci',        name:'Noci o granola senza zuccheri', qty:20,  unit:'g', step:5,  slots:['colaz','spunt'], cat:'fruttasecca' },
+  { id:'frutta_secca',name:'Frutta secca (mix)',            qty:25,  unit:'g', step:5,  slots:['spunt'],         cat:'fruttasecca' },
+
+  /* ===== PRIMI (pranzo + cena) ===== */
+  { id:'pasta',       name:'Pasta di semola',               qty:80,  unit:'g', step:10, slots:['pasto'],         cat:'primo', preferred:true },
+  { id:'pasta_int',   name:'Pasta integrale',               qty:100, unit:'g', step:10, slots:['pasto'],         cat:'primo' },
+  { id:'pasta_uovo_f',name:"Pasta all'uovo fresca",         qty:100, unit:'g', step:10, slots:['pasto'],         cat:'primo' },
+  { id:'pasta_uovo_s',name:"Pasta all'uovo secca",          qty:80,  unit:'g', step:10, slots:['pasto'],         cat:'primo' },
+  { id:'farro',       name:'Farro',                         qty:90,  unit:'g', step:10, slots:['pasto'],         cat:'primo', preferred:true },
+  { id:'riso_int',    name:'Riso integrale',                qty:80,  unit:'g', step:10, slots:['pasto'],         cat:'primo' },
+  { id:'riso_basm',   name:'Riso basmati',                  qty:80,  unit:'g', step:10, slots:['pasto'],         cat:'primo' },
+  { id:'riso_ven',    name:'Riso venere',                   qty:80,  unit:'g', step:10, slots:['pasto'],         cat:'primo' },
+  { id:'riso_par',    name:'Riso parboiled',                qty:80,  unit:'g', step:10, slots:['pasto'],         cat:'primo' },
+  { id:'orzo',        name:'Orzo perlato',                  qty:90,  unit:'g', step:10, slots:['pasto'],         cat:'primo' },
+  { id:'pane_alposto',name:'Pane integrale (al posto del primo)', qty:130, unit:'g', step:10, slots:['pasto'],   cat:'primo' },
+
+  /* ===== PIATTI UNICI (legume-based, niente secondo) ===== */
+  { id:'pasta_ceci',  name:'Pasta di ceci',                 qty:100, unit:'g', step:10, slots:['pasto'],         cat:'piattounico', solo:true },
+  { id:'pasta_lent',  name:'Pasta di lenticchie',           qty:100, unit:'g', step:10, slots:['pasto'],         cat:'piattounico', solo:true },
+  { id:'pasta_pis',   name:'Pasta di piselli',              qty:100, unit:'g', step:10, slots:['pasto'],         cat:'piattounico', solo:true },
+  { id:'fiberpasta',  name:'Fiberpasta',                    qty:100, unit:'g', step:10, slots:['pasto'],         cat:'piattounico', solo:true },
+  { id:'legumotti',   name:'Legumotti (per minestre)',      qty:100, unit:'g', step:10, slots:['pasto'],         cat:'piattounico', solo:true },
+
+  /* ===== LEGUMI da aggiungere (con 50g pasta o 60g pane int) ===== */
+  { id:'ceci_sc',     name:'Ceci in scatola scolati',       qty:160, unit:'g', step:20, slots:['pasto'],         cat:'legume', tip:'da abbinare a 50g pasta o 60g pane integrale' },
+  { id:'ceci_se',     name:'Ceci secchi',                   qty:50,  unit:'g', step:10, slots:['pasto'],         cat:'legume', tip:'da abbinare a 50g pasta o 60g pane integrale' },
+  { id:'fag_fr',      name:'Fagioli borlotti freschi',      qty:100, unit:'g', step:20, slots:['pasto'],         cat:'legume', tip:'da abbinare a 50g pasta o 60g pane integrale' },
+  { id:'fag_se',      name:'Fagioli borlotti secchi',       qty:50,  unit:'g', step:10, slots:['pasto'],         cat:'legume', tip:'da abbinare a 50g pasta o 60g pane integrale' },
+  { id:'fag_sc',      name:'Fagioli in scatola scolati',    qty:150, unit:'g', step:20, slots:['pasto'],         cat:'legume', tip:'da abbinare a 50g pasta o 60g pane integrale' },
+  { id:'lent_sc',     name:'Lenticchie in scatola scolate', qty:150, unit:'g', step:20, slots:['pasto'],         cat:'legume', tip:'da abbinare a 50g pasta o 60g pane integrale' },
+  { id:'lent_se',     name:'Lenticchie secche',             qty:50,  unit:'g', step:10, slots:['pasto'],         cat:'legume', tip:'da abbinare a 50g pasta o 60g pane integrale' },
+  { id:'piselli',     name:'Piselli surgelati',             qty:180, unit:'g', step:20, slots:['pasto'],         cat:'legume', tip:'da abbinare a 50g pasta o 60g pane integrale' },
+  { id:'patate',      name:'Patate',                        qty:150, unit:'g', step:20, slots:['pasto'],         cat:'legume', warn:'Max 1 volta al mese' },
+
+  /* ===== SECONDI - CARNI BIANCHE ===== */
+  { id:'pollo',       name:'Pollo - petto',                 qty:80,  unit:'g', step:10, slots:['pasto'],         cat:'carnebianca' },
+  { id:'pollo_co',    name:'Pollo - coscia senza pelle',    qty:120, unit:'g', step:10, slots:['pasto'],         cat:'carnebianca' },
+  { id:'tacchino',    name:'Tacchino - fesa',               qty:80,  unit:'g', step:10, slots:['pasto'],         cat:'carnebianca' },
+  { id:'tacchino_co', name:'Tacchino - coscia senza pelle', qty:120, unit:'g', step:10, slots:['pasto'],         cat:'carnebianca' },
+  { id:'coniglio',    name:'Coniglio magro',                qty:80,  unit:'g', step:10, slots:['pasto'],         cat:'carnebianca' },
+  { id:'vitello',     name:'Vitello - filetto',             qty:80,  unit:'g', step:10, slots:['pasto'],         cat:'carnebianca' },
+  { id:'vitellone',   name:'Vitellone tagli magri',         qty:80,  unit:'g', step:10, slots:['pasto'],         cat:'carnebianca' },
+
+  /* ===== SECONDI - CARNI ROSSE (max 1-2/sett) ===== */
+  { id:'maiale',      name:'Maiale - lonza/arista',         qty:80,  unit:'g', step:10, slots:['pasto'],         cat:'carnerossa', weekly:2 },
+
+  /* ===== SECONDI - PESCE ===== */
+  { id:'merluzzo',    name:'Merluzzo / nasello',            qty:120, unit:'g', step:10, slots:['pasto'],         cat:'pesce' },
+  { id:'orata',       name:'Orata fresca',                  qty:70,  unit:'g', step:10, slots:['pasto'],         cat:'pesce' },
+  { id:'spada',       name:'Pesce spada',                   qty:80,  unit:'g', step:10, slots:['pasto'],         cat:'pesce' },
+  { id:'polpo',       name:'Polpo',                         qty:150, unit:'g', step:10, slots:['pasto'],         cat:'pesce' },
+  { id:'rana',        name:'Rana pescatrice',               qty:140, unit:'g', step:10, slots:['pasto'],         cat:'pesce' },
+  { id:'razza',       name:'Razza',                         qty:130, unit:'g', step:10, slots:['pasto'],         cat:'pesce' },
+  { id:'scorfano',    name:'Scorfano',                      qty:100, unit:'g', step:10, slots:['pasto'],         cat:'pesce' },
+  { id:'seppia',      name:'Seppia',                        qty:120, unit:'g', step:10, slots:['pasto'],         cat:'pesce' },
+  { id:'sogliola',    name:'Sogliola',                      qty:100, unit:'g', step:10, slots:['pasto'],         cat:'pesce' },
+  { id:'spigola',     name:'Spigola',                       qty:100, unit:'g', step:10, slots:['pasto'],         cat:'pesce' },
+  { id:'trota',       name:'Trota',                         qty:100, unit:'g', step:10, slots:['pasto'],         cat:'pesce' },
+  { id:'calamaro',    name:'Calamaro',                      qty:130, unit:'g', step:10, slots:['pasto'],         cat:'pesce' },
+  { id:'dentice',     name:'Dentice',                       qty:80,  unit:'g', step:10, slots:['pasto'],         cat:'pesce' },
+  { id:'alice',       name:'Acciuga / alice',               qty:90,  unit:'g', step:10, slots:['pasto'],         cat:'pesce' },
+  { id:'tonno_sal',   name:'Tonno in salamoia sgocciolato', qty:80,  unit:'g', step:10, slots:['pasto'],         cat:'pesce' },
+
+  /* ===== PESCE GRASSO (-10g olio) ===== */
+  { id:'sgombro',     name:'Sgombro / maccarello',          qty:50,  unit:'g', step:10, slots:['pasto'],         cat:'pescegrasso', oilCut:10 },
+  { id:'tonno_fr',    name:'Tonno fresco',                  qty:50,  unit:'g', step:10, slots:['pasto'],         cat:'pescegrasso', oilCut:10 },
+  { id:'tonno_ol',    name:"Tonno sott'olio sgocciolato",   qty:80,  unit:'g', step:10, slots:['pasto'],         cat:'pescegrasso', oilCut:10 },
+  { id:'salmone',     name:'Salmone fresco',                qty:80,  unit:'g', step:10, slots:['pasto'],         cat:'pescegrasso', oilCut:10 },
+  { id:'triglia',     name:'Triglia',                       qty:200, unit:'g', step:10, slots:['pasto'],         cat:'pescegrasso', oilCut:10 },
+
+  /* ===== UOVA / FORMAGGI / AFFETTATI (max 1-2/sett) ===== */
+  { id:'uovo',        name:'Uovo intero',                   qty:1,   unit:'pz', step:1,  slots:['colaz','pasto'], cat:'uovoformaggio', weekly:2 },
+  { id:'prosc_cotto', name:'Prosciutto cotto magro',        qty:60,  unit:'g', step:10, slots:['colaz','pasto'], cat:'uovoformaggio', weekly:2 },
+  { id:'tacchino_arr',name:'Tacchino arrosto',              qty:60,  unit:'g', step:10, slots:['colaz','pasto'], cat:'uovoformaggio', weekly:2 },
+  { id:'ricotta',     name:'Ricotta di vacca',              qty:100, unit:'g', step:10, slots:['pasto'],         cat:'uovoformaggio', weekly:2, oilCut:10 },
+  { id:'mozzarella',  name:'Mozzarella di vacca',           qty:60,  unit:'g', step:10, slots:['pasto'],         cat:'uovoformaggio', weekly:2, oilCut:10 },
+  { id:'grana',       name:'Grana padano',                  qty:30,  unit:'g', step:5,  slots:['spunt'],         cat:'uovoformaggio' },
+
+  /* ===== AFFETTATI MAGRI (merenda) ===== */
+  { id:'prosc_mer',   name:'Prosciutto cotto (merenda)',    qty:40,  unit:'g', step:10, slots:['spunt'],         cat:'salume' },
+  { id:'tacch_mer',   name:'Affettato di tacchino',         qty:40,  unit:'g', step:10, slots:['spunt'],         cat:'salume' },
+  { id:'tonno_mer',   name:'Tonno (merenda)',               qty:40,  unit:'g', step:10, slots:['spunt'],         cat:'salume' },
+
+  /* ===== VERDURE ===== */
+  { id:'pomodori',    name:'Pomodori da insalata',          qty:200, unit:'g', step:20, slots:['pasto','spunt'], cat:'verdura', preferred:true },
+  { id:'pom_mer',     name:'Pomodori maturi (merenda)',     qty:100, unit:'g', step:20, slots:['spunt'],         cat:'verdura' },
+  { id:'asparagi',    name:'Asparagi',                      qty:180, unit:'g', step:20, slots:['pasto'],         cat:'verdura' },
+  { id:'bieta',       name:'Bieta',                         qty:200, unit:'g', step:20, slots:['pasto'],         cat:'verdura' },
+  { id:'broccoletti', name:'Broccoletti di rapa',           qty:250, unit:'g', step:20, slots:['pasto'],         cat:'verdura' },
+  { id:'broccolo',    name:'Broccolo a testa',              qty:180, unit:'g', step:20, slots:['pasto'],         cat:'verdura' },
+  { id:'carciofi',    name:'Carciofi',                      qty:200, unit:'g', step:20, slots:['pasto'],         cat:'verdura' },
+  { id:'carote',      name:'Carote',                        qty:70,  unit:'g', step:10, slots:['pasto'],         cat:'verdura', tip:'IG alto, soprattutto cotte' },
+  { id:'cavolfiore',  name:'Cavolfiore',                    qty:200, unit:'g', step:20, slots:['pasto'],         cat:'verdura' },
+  { id:'cavoli_b',    name:'Cavoli di bruxelles',           qty:120, unit:'g', step:20, slots:['pasto'],         cat:'verdura' },
+  { id:'cetrioli',    name:'Cetrioli',                      qty:300, unit:'g', step:20, slots:['pasto'],         cat:'verdura' },
+  { id:'cicoria',     name:'Cicoria da taglio',             qty:300, unit:'g', step:20, slots:['pasto'],         cat:'verdura' },
+  { id:'fagiolini',   name:'Fagiolini freschi',             qty:220, unit:'g', step:20, slots:['pasto'],         cat:'verdura' },
+  { id:'finocchi',    name:'Finocchi',                      qty:500, unit:'g', step:20, slots:['pasto'],         cat:'verdura' },
+  { id:'lattuga',     name:'Lattuga',                       qty:230, unit:'g', step:20, slots:['pasto'],         cat:'verdura' },
+  { id:'melanzane',   name:'Melanzane',                     qty:200, unit:'g', step:20, slots:['pasto'],         cat:'verdura' },
+  { id:'peperoni',    name:'Peperoni',                      qty:130, unit:'g', step:20, slots:['pasto'],         cat:'verdura' },
+  { id:'radicchio',   name:'Radicchio rosso',               qty:300, unit:'g', step:20, slots:['pasto'],         cat:'verdura' },
+  { id:'rape',        name:'Rape',                          qty:140, unit:'g', step:20, slots:['pasto'],         cat:'verdura' },
+  { id:'rucola',      name:'Rucola',                        qty:150, unit:'g', step:20, slots:['pasto'],         cat:'verdura' },
+  { id:'scarola',     name:'Scarola',                       qty:300, unit:'g', step:20, slots:['pasto'],         cat:'verdura' },
+  { id:'spinaci',     name:'Spinaci',                       qty:200, unit:'g', step:20, slots:['pasto'],         cat:'verdura' },
+  { id:'zucca',       name:'Zucca gialla',                  qty:130, unit:'g', step:20, slots:['pasto'],         cat:'verdura', tip:'IG alto' },
+  { id:'zucchine',    name:'Zucchine',                      qty:350, unit:'g', step:20, slots:['pasto'],         cat:'verdura' },
+
+  /* ===== FRUTTA (libera) ===== */
+  { id:'mela',        name:'Mela',                          qty:100, unit:'g', step:10, slots:['pasto','spunt'], cat:'frutta', preferred:true },
+  { id:'pera',        name:'Pera',                          qty:150, unit:'g', step:10, slots:['pasto','spunt'], cat:'frutta' },
+  { id:'pesca',       name:'Pesca',                         qty:150, unit:'g', step:10, slots:['pasto','spunt'], cat:'frutta' },
+  { id:'albicocche',  name:'Albicocche',                    qty:120, unit:'g', step:10, slots:['pasto','spunt'], cat:'frutta' },
+  { id:'arance',      name:'Arance',                        qty:150, unit:'g', step:10, slots:['pasto','spunt'], cat:'frutta' },
+  { id:'ciliege',     name:'Ciliege',                       qty:120, unit:'g', step:10, slots:['pasto','spunt'], cat:'frutta' },
+  { id:'clementine',  name:'Clementine',                    qty:150, unit:'g', step:10, slots:['pasto','spunt'], cat:'frutta' },
+  { id:'fragole',     name:'Fragole',                       qty:150, unit:'g', step:10, slots:['pasto','spunt'], cat:'frutta' },
+  { id:'mandaranci',  name:'Mandaranci',                    qty:100, unit:'g', step:10, slots:['pasto','spunt'], cat:'frutta' },
+  { id:'melagrane',   name:'Melagrane',                     qty:80,  unit:'g', step:10, slots:['pasto','spunt'], cat:'frutta' },
+  { id:'prugne',      name:'Prugne',                        qty:130, unit:'g', step:10, slots:['pasto','spunt'], cat:'frutta' },
+  { id:'fichidindia', name:"Fichi d'india",                 qty:100, unit:'g', step:10, slots:['pasto','spunt'], cat:'frutta' },
+  { id:'lupini',      name:'Lupini',                        qty:100, unit:'g', step:10, slots:['spunt'],         cat:'frutta' },
+  { id:'olive',       name:'Olive',                         qty:100, unit:'g', step:10, slots:['spunt'],         cat:'frutta' },
+
+  /* ===== FRUTTA SOLO A FINE PASTO ===== */
+  { id:'ananas',      name:'Ananas',                        qty:130, unit:'g', step:10, slots:['pasto'],         cat:'fruttafinep' },
+  { id:'banana',      name:'Banana',                        qty:80,  unit:'g', step:10, slots:['pasto'],         cat:'fruttafinep' },
+  { id:'cocomero',    name:'Cocomero',                      qty:250, unit:'g', step:20, slots:['pasto'],         cat:'fruttafinep' },
+  { id:'fichi',       name:'Fichi',                         qty:80,  unit:'g', step:10, slots:['pasto'],         cat:'fruttafinep' },
+  { id:'kiwi',        name:'Kiwi',                          qty:120, unit:'g', step:10, slots:['pasto'],         cat:'fruttafinep' },
+  { id:'melone',      name:'Melone',                        qty:150, unit:'g', step:10, slots:['pasto'],         cat:'fruttafinep' },
+  { id:'melone_inv',  name:"Melone d'inverno",              qty:250, unit:'g', step:20, slots:['pasto'],         cat:'fruttafinep' },
+  { id:'nespole',     name:'Nespole',                       qty:150, unit:'g', step:10, slots:['pasto'],         cat:'fruttafinep' },
+  { id:'uva',         name:'Uva',                           qty:80,  unit:'g', step:10, slots:['pasto'],         cat:'fruttafinep' },
+
+  /* ===== CONDIMENTI ===== */
+  { id:'olio',        name:'Olio extravergine d\'oliva',    qty:20,  unit:'g', step:5,  slots:['pasto'],         cat:'condimento', tip:'≈ 2 cucchiai da tavola' },
+  { id:'olio_mer',    name:"Olio EVO (merenda)",            qty:10,  unit:'g', step:5,  slots:['spunt'],         cat:'condimento', tip:'≈ 1 cucchiaio' },
+
+  /* ===== SOLO SPUNTINO NOTTURNO - dolce ===== */
+  { id:'gelato',      name:'Gelato confezionato biscotto',  qty:50,  unit:'g', step:10, slots:['notte'],         cat:'dolce', tip:"L'unico momento per un piccolo dolce" },
+  { id:'ciambellone', name:'Ciambellone',                   qty:50,  unit:'g', step:10, slots:['notte'],         cat:'dolce', tip:'Da abbinare a un bicchiere di latte' }
+];
+
+/* Quick lookup */
+const FOOD_BY_ID = {};
+FOODS.forEach(f => { FOOD_BY_ID[f.id] = f; });
+
+const SLOT_BY_ID = {};
+SLOTS.forEach(s => { SLOT_BY_ID[s.id] = s; });
+
+/* Per uno specifico SLOT (es. spuntino_notturno), aggiungi 'notte' come kind extra
+   per includere dolci nello sheet */
+function foodsForSlot(slotId) {
+  const slot = SLOT_BY_ID[slotId];
+  if (!slot) return [];
+  // accetto kind + (se notturno) anche 'notte'
+  const accept = new Set([slot.kind]);
+  if (slotId === 'spuntino_notturno') accept.add('notte');
+  return FOODS.filter(f => f.slots.some(s => accept.has(s)));
+}
