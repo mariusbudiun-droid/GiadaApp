@@ -18,237 +18,264 @@
 </head>
 <body>
 
-<!-- ============== HEADER ============== -->
-<header class="hdr">
-  <div class="hdr-eyebrow" id="hdrEyebrow">buongiorno, Giada</div>
-  <div class="hdr-sub" id="hdrSub"></div>
-</header>
-
 <!-- ============== UPDATE BANNER ============== -->
 <div class="update-banner" id="updateBanner">
   <span>Aggiornamento disponibile</span>
   <button onclick="applyUpdate()">Aggiorna</button>
 </div>
 
-<!-- ============== MAIN ============== -->
-<main>
+<!-- ============== APP WRAPPER (max-width 480, centered, padding-bottom for tabbar) ============== -->
+<div class="app">
 
-  <!-- ----- HOME ----- -->
-  <section class="section active" id="sec-home">
-    <div class="greet">
-      <div class="greet-quote" id="dayQuote">"Un pasto alla volta. Stai facendo benissimo."</div>
-      <div class="greet-progress" id="dayProgress">0 di 6 pasti registrati</div>
-    </div>
+  <!-- ============== HEADER ============== -->
+  <header class="hdr">
+    <div class="hdr-eyebrow" id="hdrEyebrow">buongiorno, Giada</div>
+    <h1 class="hdr-title">Companion</h1>
+    <div class="hdr-sub" id="hdrSub"></div>
+  </header>
 
-    <div class="card-eyebrow">pasti di oggi</div>
-    <div class="pills" id="dayPills"></div>
+  <!-- ============== MAIN ============== -->
+  <main>
 
-    <div class="card-eyebrow">misurazioni di oggi</div>
-    <div class="metrics">
-      <div class="metric">
-        <div class="metric-label">digiuno</div>
-        <div class="metric-value empty" id="m-digiuno">—</div>
-      </div>
-      <div class="metric">
-        <div class="metric-label">dopo colazione</div>
-        <div class="metric-value empty" id="m-colazione">—</div>
-      </div>
-      <div class="metric">
-        <div class="metric-label">dopo pranzo</div>
-        <div class="metric-value empty" id="m-pranzo">—</div>
-      </div>
-      <div class="metric">
-        <div class="metric-label">dopo cena</div>
-        <div class="metric-value empty" id="m-cena">—</div>
-      </div>
-      <div class="metric">
-        <div class="metric-label">chetoni</div>
-        <div class="metric-value empty" id="m-chetoni">—</div>
-      </div>
-      <div class="metric">
-        <div class="metric-label">orario misurazioni</div>
-        <div class="metric-value" id="m-timing">1h</div>
-      </div>
-    </div>
+    <!-- ----- HOME ----- -->
+    <section class="section active" id="sec-home">
+      <div class="content">
 
-    <div class="order-card">
-      <div class="order-title">L'ordine giusto a tavola</div>
-      <div class="order-steps">
-        <div class="order-step"><span class="order-num">1</span>verdure</div>
-        <div class="order-step"><span class="order-num">2</span>proteine</div>
-        <div class="order-step"><span class="order-num">3</span>carboidrati</div>
-      </div>
-      <div class="order-note">Mangiare in quest'ordine aiuta a tenere la glicemia stabile dopo il pasto.</div>
-    </div>
-  </section>
-
-  <!-- ----- PASTI ----- -->
-  <section class="section" id="sec-pasti">
-    <div id="mealList">
-      <div class="card-eyebrow">scegli il pasto da registrare</div>
-      <div class="meal-grid" id="mealGrid"></div>
-    </div>
-
-    <div id="mealDetail" class="hidden">
-      <button class="back-btn" onclick="closeMealDetail()">‹ Indietro</button>
-      <div class="meal-detail-head">
-        <div class="meal-detail-eyebrow" id="mealDetailEyebrow"></div>
-        <h2 class="meal-detail-title" id="mealDetailTitle"></h2>
-      </div>
-      <div id="mealSlots"></div>
-      <button class="primary-btn" id="saveMealBtn" onclick="saveMeal()">Salva pasto</button>
-    </div>
-  </section>
-
-  <!-- ----- MISURAZIONI ----- -->
-  <section class="section" id="sec-misurazioni">
-    <div class="card-eyebrow">timing di oggi</div>
-    <div class="timing-row">
-      <button class="timing-opt" data-t="1" onclick="setTiming(1)">1 ora dopo</button>
-      <button class="timing-opt" data-t="2" onclick="setTiming(2)">2 ore dopo</button>
-    </div>
-    <div class="muted small">Si misura alternativamente a 1h o 2h dall'inizio del pasto. Cambia se serve.</div>
-
-    <div class="meas-tabs">
-      <button class="meas-tab active" data-mtab="glicemia" onclick="switchMeasTab('glicemia')">Glicemia</button>
-      <button class="meas-tab" data-mtab="chetoni" onclick="switchMeasTab('chetoni')">Chetoni</button>
-    </div>
-
-    <!-- GLICEMIA -->
-    <div id="measGlicemia">
-      <div id="glucPicker">
-        <div class="card-eyebrow">cosa misuri ora?</div>
-        <div class="gluc-grid">
-          <button class="gluc-pick" onclick="openGluc('digiuno')">
-            <div class="gluc-pick-title">A digiuno</div>
-            <div class="gluc-pick-sub" id="lblDigiuno">al risveglio</div>
-          </button>
-          <button class="gluc-pick" onclick="openGluc('colazione')">
-            <div class="gluc-pick-title">Dopo colazione</div>
-            <div class="gluc-pick-sub" id="lblColazione">1h dal pasto</div>
-          </button>
-          <button class="gluc-pick" onclick="openGluc('pranzo')">
-            <div class="gluc-pick-title">Dopo pranzo</div>
-            <div class="gluc-pick-sub" id="lblPranzo">1h dal pasto</div>
-          </button>
-          <button class="gluc-pick" onclick="openGluc('cena')">
-            <div class="gluc-pick-title">Dopo cena</div>
-            <div class="gluc-pick-sub" id="lblCena">1h dal pasto</div>
-          </button>
+        <!-- HERO -->
+        <div class="card greet-card">
+          <div class="card-eyebrow">oggi</div>
+          <h2 class="card-title">Un giorno alla volta.</h2>
+          <div class="quote" id="dayQuote">"Un pasto alla volta. Stai facendo benissimo."</div>
+          <div class="hero-progress" id="dayProgress">0 di 6 pasti registrati</div>
         </div>
+
+        <!-- PILLS PASTI -->
+        <div class="card-eyebrow eb-spaced">pasti di oggi</div>
+        <div class="day-pills" id="dayPills"></div>
+
+        <!-- METRICHE -->
+        <div class="card-eyebrow eb-spaced">misurazioni di oggi</div>
+        <div class="metric-row">
+          <div class="metric">
+            <div class="metric-label">digiuno</div>
+            <div class="metric-value empty" id="m-digiuno">—</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">dopo colazione</div>
+            <div class="metric-value empty" id="m-colazione">—</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">dopo pranzo</div>
+            <div class="metric-value empty" id="m-pranzo">—</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">dopo cena</div>
+            <div class="metric-value empty" id="m-cena">—</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">chetoni</div>
+            <div class="metric-value empty" id="m-chetoni">—</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">timing oggi</div>
+            <div class="metric-value" id="m-timing">1h</div>
+          </div>
+        </div>
+
+        <!-- ORDINE A TAVOLA -->
+        <div class="order-card">
+          <div class="order-title">L'ordine giusto a tavola</div>
+          <div class="order-steps">
+            <div class="order-step">1. verdure</div>
+            <span class="order-arrow">›</span>
+            <div class="order-step">2. proteine</div>
+            <span class="order-arrow">›</span>
+            <div class="order-step">3. carboidrati</div>
+          </div>
+          <div class="muted small" style="margin-top:10px;">Mangiare in quest'ordine aiuta a tenere la glicemia stabile dopo il pasto.</div>
+        </div>
+
       </div>
+    </section>
 
-      <div id="glucInput" class="hidden">
-        <button class="back-btn" onclick="closeGluc()">‹ Indietro</button>
-        <div class="card">
-          <div class="card-eyebrow">stai misurando</div>
-          <div class="card-title" id="glucKindLabel"></div>
-          <div class="muted small" id="glucTimingLabel"></div>
+    <!-- ----- PASTI ----- -->
+    <section class="section" id="sec-pasti">
+      <div class="content">
 
-          <div class="input-block">
-            <label>Valore (mg/dL)</label>
-            <input type="number" inputmode="numeric" id="glucValue" placeholder="es. 95" min="40" max="400">
+        <div id="mealList">
+          <div class="card-eyebrow">scegli il pasto da registrare</div>
+          <div class="meal-grid" id="mealGrid"></div>
+        </div>
+
+        <div id="mealDetail" class="hidden">
+          <button class="back-btn" onclick="closeMealDetail()">‹ Indietro</button>
+          <div class="meal-detail-head">
+            <div class="card-eyebrow" id="mealDetailEyebrow"></div>
+            <h2 class="hdr-title meal-detail-title" id="mealDetailTitle"></h2>
+          </div>
+          <div id="mealSlots"></div>
+          <button class="save-btn" id="saveMealBtn" onclick="saveMeal()">Salva pasto</button>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ----- MISURAZIONI ----- -->
+    <section class="section" id="sec-misurazioni">
+      <div class="content">
+
+        <div class="card-eyebrow">timing di oggi</div>
+        <div class="timing-toggle">
+          <button class="timing-opt" data-t="1" onclick="setTiming(1)">1 ora dopo</button>
+          <button class="timing-opt" data-t="2" onclick="setTiming(2)">2 ore dopo</button>
+        </div>
+        <div class="muted small" style="margin-bottom:14px;">Misurazione a 1h o 2h dall'inizio del pasto. Si alterna giorno per giorno.</div>
+
+        <div class="meas-tabs">
+          <button class="meas-tab active" data-mtab="glicemia" onclick="switchMeasTab('glicemia')">Glicemia</button>
+          <button class="meas-tab" data-mtab="chetoni" onclick="switchMeasTab('chetoni')">Chetoni</button>
+        </div>
+
+        <!-- GLICEMIA -->
+        <div id="measGlicemia">
+          <div id="glucPicker">
+            <div class="card-eyebrow">cosa stai misurando?</div>
+            <div class="gluc-options">
+              <button class="gluc-btn" onclick="openGluc('digiuno')">
+                <div class="gluc-btn-label">A digiuno</div>
+                <div class="gluc-btn-sub">al risveglio</div>
+              </button>
+              <button class="gluc-btn" onclick="openGluc('colazione')">
+                <div class="gluc-btn-label">Dopo colazione</div>
+                <div class="gluc-btn-sub" id="lblColazione">1h dal pasto</div>
+              </button>
+              <button class="gluc-btn" onclick="openGluc('pranzo')">
+                <div class="gluc-btn-label">Dopo pranzo</div>
+                <div class="gluc-btn-sub" id="lblPranzo">1h dal pasto</div>
+              </button>
+              <button class="gluc-btn" onclick="openGluc('cena')">
+                <div class="gluc-btn-label">Dopo cena</div>
+                <div class="gluc-btn-sub" id="lblCena">1h dal pasto</div>
+              </button>
+            </div>
           </div>
 
-          <div class="gluc-feedback" id="glucFeedback">
-            <span class="gluc-fb-icon" id="glucFbIcon"></span>
-            <span class="gluc-fb-text" id="glucFbText"></span>
+          <div id="glucInput" class="hidden">
+            <button class="back-btn" onclick="closeGluc()">‹ Indietro</button>
+            <div class="input-card">
+              <div class="input-meta">stai misurando <strong id="glucKindLabel"></strong></div>
+              <div class="input-meta muted" id="glucTimingLabel"></div>
+              <div class="input-row">
+                <input type="number" inputmode="numeric" id="glucValue" placeholder="—" min="40" max="400">
+                <span class="unit">mg/dL</span>
+              </div>
+
+              <div class="feedback" id="glucFeedback">
+                <span class="feedback-icon" id="glucFbIcon"></span>
+                <span id="glucFbText"></span>
+              </div>
+
+              <button class="note-toggle" onclick="toggleNote('glucNote')">+ aggiungi una nota</button>
+              <div class="note-area" id="glucNote">
+                <textarea id="glucNoteText" placeholder="(facoltativo) es: notte agitata, stress, sport leggero…"></textarea>
+              </div>
+
+              <button class="save-btn" id="saveGlucBtn" onclick="saveGluc()" disabled>Salva misurazione</button>
+            </div>
           </div>
+        </div>
 
-          <button class="link-btn" onclick="toggleNote('glucNote')">Aggiungi nota</button>
-          <div class="note-block" id="glucNote">
-            <textarea id="glucNoteText" placeholder="(facoltativo) es: notte agitata, stress, sport leggero…"></textarea>
+        <!-- CHETONI -->
+        <div id="measChetoni" class="hidden">
+          <div class="input-card">
+            <div class="input-meta">tocca il risultato che vedi sullo <strong>stick urinario</strong></div>
+
+            <div class="keto-grid" id="ketoGrid">
+              <button class="keto-chip" data-k="0">Negativo<span class="keto-chip-val">0 mg/dL</span></button>
+              <button class="keto-chip" data-k="5">Tracce<span class="keto-chip-val">5 mg/dL</span></button>
+              <button class="keto-chip" data-k="15">+<span class="keto-chip-val">15 mg/dL</span></button>
+              <button class="keto-chip" data-k="40">++<span class="keto-chip-val">40 mg/dL</span></button>
+              <button class="keto-chip" data-k="80">+++<span class="keto-chip-val">80 mg/dL</span></button>
+              <button class="keto-chip" data-k="160">++++<span class="keto-chip-val">160 mg/dL</span></button>
+            </div>
+
+            <div class="feedback" id="ketoFeedback">
+              <span class="feedback-icon" id="ketoFbIcon"></span>
+              <span id="ketoFbText"></span>
+            </div>
+
+            <button class="note-toggle" onclick="toggleNote('ketoNote')">+ aggiungi una nota</button>
+            <div class="note-area" id="ketoNote">
+              <textarea id="ketoNoteText" placeholder="(facoltativo) es: cena leggera ieri, poca acqua…"></textarea>
+            </div>
+
+            <button class="save-btn" id="saveKetoBtn" onclick="saveKeto()" disabled>Salva misurazione</button>
           </div>
-
-          <button class="primary-btn" id="saveGlucBtn" onclick="saveGluc()" disabled>Salva misurazione</button>
         </div>
+
       </div>
-    </div>
+    </section>
 
-    <!-- CHETONI -->
-    <div id="measChetoni" class="hidden">
-      <div class="card">
-        <div class="card-eyebrow">chetoni urinari</div>
-        <div class="card-title">Risultato dello stick</div>
-        <div class="muted small">Tocca il risultato che vedi sullo stick.</div>
-
-        <div class="keto-grid" id="ketoGrid">
-          <button class="keto-chip" data-v="0">Negativo</button>
-          <button class="keto-chip" data-v="5">Tracce</button>
-          <button class="keto-chip" data-v="15">+</button>
-          <button class="keto-chip" data-v="40">++</button>
-          <button class="keto-chip" data-v="80">+++</button>
-          <button class="keto-chip" data-v="160">++++</button>
-        </div>
-
-        <div class="gluc-feedback" id="ketoFeedback">
-          <span class="gluc-fb-icon" id="ketoFbIcon"></span>
-          <span class="gluc-fb-text" id="ketoFbText"></span>
-        </div>
-
-        <button class="link-btn" onclick="toggleNote('ketoNote')">Aggiungi nota</button>
-        <div class="note-block" id="ketoNote">
-          <textarea id="ketoNoteText" placeholder="(facoltativo) es: cena leggera ieri, poca acqua…"></textarea>
-        </div>
-
-        <button class="primary-btn" id="saveKetoBtn" onclick="saveKeto()" disabled>Salva misurazione</button>
+    <!-- ----- DIARIO ----- -->
+    <section class="section" id="sec-diario">
+      <div class="content">
+        <div class="card-eyebrow">diario</div>
+        <div id="diaryContent"></div>
       </div>
-    </div>
-  </section>
+    </section>
 
-  <!-- ----- DIARIO ----- -->
-  <section class="section" id="sec-diario">
-    <div class="card-eyebrow">diario</div>
-    <div id="diaryContent"></div>
-  </section>
+    <!-- ----- STATS ----- -->
+    <section class="section" id="sec-stats">
+      <div class="content">
+        <div class="card-eyebrow">come va</div>
+        <div id="statsContent"></div>
+      </div>
+    </section>
 
-  <!-- ----- STATS ----- -->
-  <section class="section" id="sec-stats">
-    <div class="card-eyebrow">come va</div>
-    <div id="statsContent"></div>
-  </section>
+    <!-- ----- IMPOSTAZIONI ----- -->
+    <section class="section" id="sec-set">
+      <div class="content">
+        <div class="card-eyebrow">impostazioni</div>
+        <div id="settingsContent"></div>
+      </div>
+    </section>
 
-  <!-- ----- IMPOSTAZIONI ----- -->
-  <section class="section" id="sec-set">
-    <div class="card-eyebrow">impostazioni</div>
-    <div id="settingsContent"></div>
-  </section>
-
-</main>
+  </main>
+</div><!-- /.app -->
 
 <!-- ============== TAB BAR ============== -->
 <nav class="tabbar">
-  <button class="tab active" data-tab="home" onclick="goTo('home')">
-    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 11l9-7 9 7v10a1 1 0 01-1 1h-5v-7h-6v7H4a1 1 0 01-1-1V11z" stroke-linejoin="round"/></svg>
-    <span>Home</span>
+  <button class="tab active" data-tab="home" onclick="goTo('home')" aria-label="Home">
+    <svg class="tab-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10a1 1 0 0 0 1 1h4v-7h4v7h4a1 1 0 0 0 1-1V10"/></svg>
+    <span class="tab-label">Home</span>
   </button>
-  <button class="tab" data-tab="pasti" onclick="goTo('pasti')">
-    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 3v18M5 13c2 0 3-2 3-5s-1-5-3-5M19 3v18M16 3v6c0 1 1 2 3 2"/></svg>
-    <span>Pasti</span>
+  <button class="tab" data-tab="pasti" onclick="goTo('pasti')" aria-label="Pasti">
+    <svg class="tab-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3v18M5 3c2 0 3 2 3 5s-1 5-3 5M19 3v18M19 3c-2 0-3 3-3 5 0 2 1 3 3 3"/></svg>
+    <span class="tab-label">Pasti</span>
   </button>
-  <button class="tab" data-tab="misurazioni" onclick="goTo('misurazioni')">
-    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
-    <span>Misurazioni</span>
+  <button class="tab" data-tab="misurazioni" onclick="goTo('misurazioni')" aria-label="Misurazioni">
+    <svg class="tab-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+    <span class="tab-label">Misurazioni</span>
   </button>
-  <button class="tab" data-tab="diario" onclick="goTo('diario')">
-    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 4h12a2 2 0 012 2v14l-3-2-3 2-3-2-3 2-3-2V6a2 2 0 012-2z"/><path d="M9 9h6M9 13h4"/></svg>
-    <span>Diario</span>
+  <button class="tab" data-tab="diario" onclick="goTo('diario')" aria-label="Diario">
+    <svg class="tab-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4h11a2 2 0 0 1 2 2v14l-3-2-3 2-3-2-3 2-3-2V6a2 2 0 0 1 2-2z"/><path d="M9 9h6M9 13h4"/></svg>
+    <span class="tab-label">Diario</span>
   </button>
-  <button class="tab" data-tab="stats" onclick="goTo('stats')">
-    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>
-    <span>Stats</span>
+  <button class="tab" data-tab="stats" onclick="goTo('stats')" aria-label="Stats">
+    <svg class="tab-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V11M10 20V4M16 20v-7M22 20H2"/></svg>
+    <span class="tab-label">Stats</span>
   </button>
-  <button class="tab" data-tab="set" onclick="goTo('set')">
-    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.8-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1.1-1.5 1.7 1.7 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.8 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1.1 1.7 1.7 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.8.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.8V9a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z"/></svg>
-    <span>Più</span>
+  <button class="tab" data-tab="set" onclick="goTo('set')" aria-label="Impostazioni">
+    <svg class="tab-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>
+    <span class="tab-label">Altro</span>
   </button>
 </nav>
 
-<!-- ============== SHEET (per slot pasto) ============== -->
+<!-- ============== SHEET ============== -->
 <div class="sheet-overlay" id="sheetOverlay" onclick="closeSheet()"></div>
 <div class="sheet" id="sheet">
   <div class="sheet-handle"></div>
-  <div class="sheet-head">
+  <div class="sheet-header">
     <div class="sheet-title" id="sheetTitle"></div>
     <div class="sheet-sub" id="sheetSub"></div>
   </div>
@@ -260,9 +287,9 @@
   <div class="confirm-box">
     <div class="confirm-title" id="confirmTitle"></div>
     <div class="confirm-msg" id="confirmMsg"></div>
-    <div class="confirm-actions">
-      <button class="confirm-cancel" onclick="closeConfirm()">Annulla</button>
-      <button class="confirm-yes" id="confirmYes">Conferma</button>
+    <div class="confirm-btns">
+      <button class="confirm-btn cancel" onclick="closeConfirm()">Annulla</button>
+      <button class="confirm-btn yes" id="confirmYes">Conferma</button>
     </div>
   </div>
 </div>
