@@ -1,7 +1,7 @@
 {
-  "name": "Giada Companion",
+  "name": "Giada",
   "short_name": "Giada",
-  "description": "Compagna di percorso per il diabete gestazionale",
+  "description": "Diario quotidiano del diabete gestazionale",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
