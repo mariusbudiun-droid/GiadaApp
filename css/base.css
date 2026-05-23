@@ -246,16 +246,23 @@ input[type="number"] { -moz-appearance: textfield; }
   background: var(--surface); border-radius: 22px; padding: 22px;
   border: 1px solid var(--border); margin-bottom: 14px;
 }
-.input-row { display: flex; align-items: baseline; gap: 6px; justify-content: center; margin: 18px 0; }
+.input-row {
+  display: flex; align-items: baseline; gap: 8px;
+  justify-content: center; margin: 18px 0;
+  padding: 0 8px;
+}
 .input-row input {
-  font-family: var(--mono); font-size: 56px; font-weight: 500;
-  width: 140px; text-align: center;
+  font-family: var(--mono); font-size: 48px; font-weight: 500;
+  width: 180px; min-width: 0; max-width: 100%;
+  text-align: center;
   border: none; border-bottom: 2px solid var(--border);
   background: transparent; outline: none;
-  letter-spacing: -.03em; color: var(--text-dark);
+  letter-spacing: -.02em; color: var(--text-dark);
+  padding: 4px 8px;
+  -webkit-appearance: none; appearance: none;
 }
 .input-row input:focus { border-color: var(--accent); }
-.input-row .unit { font-size: 14px; color: var(--text-medium); }
+.input-row .unit { font-size: 14px; color: var(--text-medium); white-space: nowrap; flex-shrink: 0; }
 .input-meta { text-align: center; font-size: 13px; color: var(--text-medium); margin-bottom: 4px; }
 .input-meta strong { color: var(--text-dark); }
 
