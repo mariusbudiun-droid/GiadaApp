@@ -1,21 +1,15 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
   <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#E8D5C4"/>
-      <stop offset="55%" stop-color="#D4A584"/>
-      <stop offset="100%" stop-color="#B85C42"/>
-    </linearGradient>
-    <radialGradient id="glow" cx="0.3" cy="0.3" r="0.7">
-      <stop offset="0%" stop-color="#FBF7F2" stop-opacity="0.4"/>
-      <stop offset="100%" stop-color="#FBF7F2" stop-opacity="0"/>
+    <radialGradient id="bgM" cx="0.5" cy="0.4" r="0.8">
+      <stop offset="0%" stop-color="#F4DDD0"/>
+      <stop offset="100%" stop-color="#C28B6E"/>
     </radialGradient>
   </defs>
-  <rect width="1024" height="1024" fill="url(#bg)"/>
-  <rect width="1024" height="1024" fill="url(#glow)"/>
-  <g transform="translate(512 512) scale(0.72)" fill="#FBF7F2">
-    <circle cx="-30" cy="-280" r="55"/>
-    <path d="M -85 -245 Q -110 -180 -100 -110 Q -80 -50 -30 0 Q 60 60 130 130 Q 200 210 175 290 Q 140 360 50 360 Q -90 360 -180 280 Q -250 200 -260 80 Q -270 -50 -230 -160 Q -190 -250 -110 -270 Z"/>
-    <rect x="40" y="120" width="180" height="48" rx="24"/>
-    <path d="M -10 175 C -10 158, -28 148, -38 162 C -48 148, -66 158, -66 175 C -66 196, -38 218, -38 218 C -38 218, -10 196, -10 175 Z" fill="#B85C42" opacity="0.7"/>
+  <rect width="1024" height="1024" fill="url(#bgM)"/>
+  <g transform="translate(143 143) scale(0.72)">
+    <circle cx="512" cy="400" r="190" fill="none" stroke="#FBF7F2" stroke-width="12" opacity="0.9"/>
+    <circle cx="512" cy="400" r="58" fill="#FBF7F2"/>
+    <text x="512" y="760" font-family="Georgia, 'Times New Roman', serif" font-size="130" font-weight="400" text-anchor="middle" fill="#FBF7F2" letter-spacing="-2">giada</text>
+    <circle cx="660" cy="760" r="14" fill="#B85C42"/>
   </g>
 </svg>
