@@ -841,3 +841,86 @@ body.partner-mode #sec-misurazioni .content::before {
   color: var(--text-medium); font-size: 13px; text-align: center;
   line-height: 1.5;
 }
+
+/* ============== LAVAGNETTA / NOTES BOARD ============== */
+.notes-board {
+  display: flex; flex-direction: column; gap: 10px;
+  margin-bottom: 8px;
+}
+.note-bubble {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 12px 14px;
+  position: relative;
+}
+.note-bubble.theirs {
+  background: linear-gradient(135deg, var(--paper) 0%, var(--accent-soft) 100%);
+  border-color: var(--border);
+}
+.note-bubble.theirs.empty {
+  background: var(--paper);
+  border-style: dashed;
+}
+.note-bubble.mine {
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+}
+.note-bubble-head {
+  display: flex; justify-content: space-between; align-items: baseline;
+  margin-bottom: 6px;
+}
+.note-bubble-from {
+  font-family: var(--serif); font-style: italic;
+  font-size: 13px;
+  color: var(--accent-dark);
+  letter-spacing: .02em;
+}
+.note-bubble-when {
+  font-size: 11px;
+  color: var(--text-light);
+  font-family: var(--mono);
+}
+.note-bubble-status {
+  font-size: 11px;
+  color: var(--text-light);
+  font-style: italic;
+}
+.note-bubble-text {
+  font-size: 14px;
+  color: var(--text-dark);
+  line-height: 1.45;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+.note-bubble-text.muted {
+  color: var(--text-light);
+  font-style: italic;
+}
+.note-textarea {
+  width: 100%;
+  box-sizing: border-box;
+  border: none; outline: none;
+  background: transparent;
+  resize: none;
+  font-family: var(--sans);
+  font-size: 14px;
+  color: var(--text-dark);
+  line-height: 1.45;
+  padding: 0;
+  min-height: 38px;
+  overflow: hidden;
+}
+.note-textarea::placeholder {
+  color: var(--text-light);
+  font-style: italic;
+}
+.note-foot {
+  display: flex; justify-content: flex-end;
+  margin-top: 6px;
+}
+.note-count {
+  font-size: 11px;
+  color: var(--text-light);
+  font-family: var(--mono);
+}
