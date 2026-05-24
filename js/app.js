@@ -4,7 +4,7 @@
    ========================================================= */
 'use strict';
 
-const APP_VERSION = '1.3.1';
+const APP_VERSION = '1.4.0';
 console.log('%c GIADA · v' + APP_VERSION + ' ', 'background:#7A9978;color:white;padding:4px 8px;border-radius:4px;font-weight:bold;');
 
 /* ---------- STORAGE ---------- */

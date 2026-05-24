@@ -138,6 +138,7 @@ async function syncPushMeal(meal) {
     ts: meal.ts,
     items: meal.items || null,
     choices: meal.choices || null,
+    note: meal.note || null,
     updated_at: new Date().toISOString()
   };
   try {
@@ -225,7 +226,8 @@ async function syncPullAll() {
       ts: Number(r.ts),
       mealId: r.meal_id,
       items: r.items || undefined,
-      choices: r.choices || undefined
+      choices: r.choices || undefined,
+      note: r.note || undefined
     }));
     DATA.measurements = (measurements || []).map(r => ({
       id: r.local_id,

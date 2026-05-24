@@ -214,7 +214,7 @@ function renderEntry(e) {
         return s;
       });
     }
-    return `<div class="diary-entry"><div class="diary-time">${fmtTime(e.ts)}</div><div class="diary-body"><div class="diary-kind">${slot ? slot.name : 'pasto'}</div><div class="diary-content" style="font-size:13px;">${items.join(' · ')}</div></div><button class="diary-del" onclick="confirmDelMeal('${e.id}')">×</button></div>`;
+    return `<div class="diary-entry"><div class="diary-time">${fmtTime(e.ts)}</div><div class="diary-body"><div class="diary-kind">${slot ? slot.name : 'pasto'}</div><div class="diary-content" style="font-size:13px;">${items.join(' · ') || '<em style="color:var(--text-light)">solo una nota</em>'}</div>${e.note ? `<div class="diary-note">"${escapeHtml(e.note)}"</div>` : ''}</div><button class="diary-del" onclick="confirmDelMeal('${e.id}')">×</button></div>`;
   }
 }
 
@@ -489,6 +489,9 @@ function exportDiarioTxt() {
             if (c.extra) l += ' ' + c.extra;
             txt += l + '\n';
           });
+        }
+        if (e.note) {
+          txt += `    nota: ${e.note}\n`;
         }
       }
     });

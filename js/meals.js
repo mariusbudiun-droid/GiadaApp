@@ -10,6 +10,7 @@
 
 let currentMeal = null;        // slotId attivo
 let currentItems = [];          // [{foodId, qty}]
+let currentNote = '';           // nota libera del pasto
 
 /* ---------- LISTA DEI 6 PASTI ---------- */
 function renderPasti() {
@@ -24,9 +25,11 @@ function renderPasti() {
     const entry = todayMeals.find(m => m.mealId === slot.id);
     const items = entry ? (entry.items || []) : [];
     const hasItems = items.length > 0;
+    const hasNote = !!(entry && entry.note);
+    const isFilled = hasItems || hasNote;
 
     const btn = document.createElement('button');
-    btn.className = 'meal-tile' + (hasItems ? ' done' : '');
+    btn.className = 'meal-tile' + (isFilled ? ' done' : '');
     btn.onclick = () => openMeal(slot.id);
 
     let preview = '';
@@ -37,14 +40,18 @@ function renderPasti() {
       }).filter(Boolean).join(' · ');
       const extra = items.length > 3 ? ` +${items.length-3}` : '';
       preview = `<div class="meal-tile-preview">${escapeHtml(names)}${extra}</div>`;
+    } else if (hasNote) {
+      preview = `<div class="meal-tile-preview">solo una nota</div>`;
     } else {
       preview = `<div class="meal-tile-preview empty">tocca per aggiungere</div>`;
     }
 
+    const noteBadge = hasNote ? `<span class="meal-tile-note">📝</span>` : '';
+
     btn.innerHTML = `
       <div class="meal-tile-head">
         <span class="meal-tile-icon">${slot.icon}</span>
-        <span class="meal-tile-time">${slot.time}</span>
+        <span class="meal-tile-meta">${noteBadge}<span class="meal-tile-time">${slot.time}</span></span>
       </div>
       <div class="meal-tile-name">${slot.name}</div>
       ${preview}`;
@@ -61,6 +68,7 @@ function openMeal(slotId) {
   const today = todayStr();
   const ex = DATA.meals.find(m => dateOf(m.ts) === today && m.mealId === slotId);
   currentItems = ex && ex.items ? JSON.parse(JSON.stringify(ex.items)) : [];
+  currentNote = ex && ex.note ? String(ex.note) : '';
 
   document.getElementById('mealList').classList.add('hidden');
   document.getElementById('mealDetail').classList.remove('hidden');
@@ -76,6 +84,7 @@ function openMealReadOnly(slotId) {
   const today = todayStr();
   const ex = DATA.meals.find(m => dateOf(m.ts) === today && m.mealId === slotId);
   const items = ex && ex.items ? ex.items : [];
+  const note = ex && ex.note ? String(ex.note) : '';
 
   document.getElementById('mealList').classList.add('hidden');
   document.getElementById('mealDetail').classList.remove('hidden');
@@ -86,21 +95,29 @@ function openMealReadOnly(slotId) {
 
   const c = document.getElementById('mealSlots');
   let html = '';
-  if (items.length === 0) {
+  if (items.length === 0 && !note) {
     html = `<div class="empty-meal"><div class="empty-meal-emoji">🍽️</div><div>Nessun alimento ancora registrato.</div></div>`;
   } else {
-    html += `<div class="meal-items">`;
-    items.forEach(it => {
-      const f = FOOD_BY_ID[it.foodId];
-      if (!f) return;
-      html += `<div class="meal-item readonly">
-        <div class="meal-item-main">
-          <div class="meal-item-name">${escapeHtml(f.name)}</div>
-        </div>
-        <div class="meal-item-qty-readonly">${it.qty}<span class="qty-unit">${f.unit}</span></div>
+    if (items.length > 0) {
+      html += `<div class="meal-items">`;
+      items.forEach(it => {
+        const f = FOOD_BY_ID[it.foodId];
+        if (!f) return;
+        html += `<div class="meal-item readonly">
+          <div class="meal-item-main">
+            <div class="meal-item-name">${escapeHtml(f.name)}</div>
+          </div>
+          <div class="meal-item-qty-readonly">${it.qty}<span class="qty-unit">${f.unit}</span></div>
+        </div>`;
+      });
+      html += `</div>`;
+    }
+    if (note) {
+      html += `<div class="meal-note-readonly">
+        <div class="meal-note-readonly-label">Nota di Giada</div>
+        <div class="meal-note-readonly-text">${escapeHtml(note)}</div>
       </div>`;
-    });
-    html += `</div>`;
+    }
   }
   c.innerHTML = html;
   // Nascondo eventuale hint autosave
@@ -111,12 +128,21 @@ function openMealReadOnly(slotId) {
 function closeMealDetail() {
   currentMeal = null;
   currentItems = [];
+  currentNote = '';
   renderPasti();
 }
 
 function renderMealDetail() {
   const c = document.getElementById('mealSlots');
   if (!c) return;
+
+  // Se l'utente sta scrivendo la nota, non ricostruisco la sezione nota
+  const activeNote = document.getElementById('mealNoteText');
+  const isEditingNote = activeNote && document.activeElement === activeNote;
+  if (isEditingNote) {
+    // sincronizzo currentNote dall'input prima di tutto
+    currentNote = activeNote.value;
+  }
 
   // Calcolo warning frequenze attivi
   const freqWarns = computeFrequencyWarnings();
@@ -153,7 +179,52 @@ function renderMealDetail() {
   // PULSANTE AGGIUNGI
   html += `<button class="add-item-btn" onclick="openFoodSheet()">+ aggiungi alimento</button>`;
 
+  // NOTA DEL PASTO
+  const noteLen = (currentNote || '').length;
+  html += `
+    <div class="meal-note-block">
+      <label class="meal-note-label" for="mealNoteText">Nota</label>
+      <textarea
+        id="mealNoteText"
+        class="meal-note-textarea"
+        maxlength="500"
+        rows="2"
+        placeholder="Come ti sei sentita? Voglie, sintomi, qualunque cosa…"
+      >${escapeHtml(currentNote || '')}</textarea>
+      <div class="meal-note-foot">
+        <span class="meal-note-status" id="mealNoteStatus"></span>
+        <span class="meal-note-count"><span id="mealNoteCount">${noteLen}</span>/500</span>
+      </div>
+    </div>`;
+
   c.innerHTML = html;
+
+  // Listener per nota del pasto
+  const noteEl = document.getElementById('mealNoteText');
+  if (noteEl) {
+    const cntEl = document.getElementById('mealNoteCount');
+    const statusEl = document.getElementById('mealNoteStatus');
+    const autoGrow = () => {
+      noteEl.style.height = 'auto';
+      noteEl.style.height = Math.min(noteEl.scrollHeight, 200) + 'px';
+    };
+    autoGrow();
+    let noteDebounce = null;
+    noteEl.addEventListener('input', () => {
+      currentNote = noteEl.value;
+      if (cntEl) cntEl.textContent = currentNote.length;
+      autoGrow();
+      if (statusEl) statusEl.textContent = 'in salvataggio…';
+      if (noteDebounce) clearTimeout(noteDebounce);
+      noteDebounce = setTimeout(() => {
+        autoSave();
+        if (statusEl) {
+          statusEl.textContent = 'salvato';
+          setTimeout(() => { if (statusEl) statusEl.textContent = ''; }, 1200);
+        }
+      }, 600);
+    });
+  }
 }
 
 function renderMealItem(f, it, idx) {
@@ -197,9 +268,11 @@ function removeItem(idx) {
 function autoSave() {
   const today = todayStr();
   const ix = DATA.meals.findIndex(m => dateOf(m.ts) === today && m.mealId === currentMeal);
+  const hasItems = currentItems.length > 0;
+  const hasNote = (currentNote || '').trim().length > 0;
   let deletedId = null;
   let pushedMeal = null;
-  if (currentItems.length === 0) {
+  if (!hasItems && !hasNote) {
     if (ix >= 0) {
       deletedId = DATA.meals[ix].id;
       DATA.meals.splice(ix, 1);
@@ -209,7 +282,8 @@ function autoSave() {
       id: ix >= 0 ? DATA.meals[ix].id : uid(),
       ts: ix >= 0 ? DATA.meals[ix].ts : Date.now(),
       mealId: currentMeal,
-      items: JSON.parse(JSON.stringify(currentItems))
+      items: hasItems ? JSON.parse(JSON.stringify(currentItems)) : [],
+      note: hasNote ? currentNote.trim() : null
     };
     if (ix >= 0) DATA.meals[ix] = e; else DATA.meals.push(e);
     pushedMeal = e;
