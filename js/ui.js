@@ -101,14 +101,16 @@ function showGlucFeedback() {
 function saveGluc() {
   const v = parseInt(document.getElementById('glucValue').value);
   if (isNaN(v)) return;
-  DATA.measurements.push({
+  const rec = {
     id: uid(), ts: Date.now(),
     kind: 'glicemia', subkind: glucKind,
     timing: (glucKind === 'digiuno') ? null : getTimingForToday(),
     value: v,
     note: document.getElementById('glucNoteText').value.trim()
-  });
+  };
+  DATA.measurements.push(rec);
   saveData();
+  if (typeof syncPushMeasurement === 'function') syncPushMeasurement(rec);
   toast('Misurazione salvata');
   closeGluc();
   goTo('home');
@@ -143,13 +145,15 @@ function selectKeto(chip) {
 
 function saveKeto() {
   if (ketoChoice == null) return;
-  DATA.measurements.push({
+  const rec = {
     id: uid(), ts: Date.now(),
     kind: 'chetoni', subkind: 'mattina',
     value: ketoChoice,
     note: document.getElementById('ketoNoteText').value.trim()
-  });
+  };
+  DATA.measurements.push(rec);
   saveData();
+  if (typeof syncPushMeasurement === 'function') syncPushMeasurement(rec);
   toast('Misurazione salvata');
   resetKeto();
   goTo('home');
@@ -217,13 +221,17 @@ function renderEntry(e) {
 function confirmDelMeas(id) {
   showConfirm('Cancellare questa misurazione?', 'L\'azione non si può annullare.', () => {
     DATA.measurements = DATA.measurements.filter(m => m.id !== id);
-    saveData(); renderDiario(); toast('Cancellata');
+    saveData();
+    if (typeof syncDeleteMeasurement === 'function') syncDeleteMeasurement(id);
+    renderDiario(); toast('Cancellata');
   });
 }
 function confirmDelMeal(id) {
   showConfirm('Cancellare questo pasto?', 'L\'azione non si può annullare.', () => {
     DATA.meals = DATA.meals.filter(m => m.id !== id);
-    saveData(); renderDiario(); toast('Pasto cancellato');
+    saveData();
+    if (typeof syncDeleteMeal === 'function') syncDeleteMeal(id);
+    renderDiario(); toast('Pasto cancellato');
   });
 }
 
@@ -287,8 +295,10 @@ function renderStats() {
 function renderSettings() {
   const c = document.getElementById('settingsContent');
   if (!c) return;
+  const shareBlock = renderShareSection();
   c.innerHTML = `
-    <div class="card-eyebrow" style="margin:4px 4px 8px">aspetto</div>
+    ${shareBlock}
+    <div class="card-eyebrow" style="margin:18px 4px 8px">aspetto</div>
     <div class="theme-grid">
       ${THEMES.map(t => `
         <button class="theme-card ${CURRENT_THEME.palette === t.id ? 'selected' : ''}" onclick="selectPalette('${t.id}')">
@@ -316,9 +326,83 @@ function renderSettings() {
     <button class="set-row" onclick="exportDiarioTxt()"><div><div class="set-row-label">Esporta diario per la dottoressa</div><div class="set-row-sub">File leggibile da stampare</div></div><span style="color:var(--text-light)">›</span></button>
     <button class="set-row" onclick="confirmReset()"><div><div class="set-row-label" style="color:var(--alert-text)">Cancella tutti i dati</div><div class="set-row-sub">Non si può annullare</div></div><span style="color:var(--alert-text)">›</span></button>
 
-    <div class="muted center" style="margin-top:20px;font-size:12px;">Tutti i dati restano solo sul tuo telefono.<br>Niente cloud, niente account.</div>
-    <div class="muted center" style="margin-top:6px;font-size:11px;">Giada v${APP_VERSION} · creato con cura</div>
+    <div class="muted center" style="margin-top:20px;font-size:12px;">Giada v${APP_VERSION}</div>
   `;
+}
+
+function renderShareSection() {
+  if (typeof SYNC === 'undefined' || !SYNC.role) return '';
+
+  if (SYNC.role === 'owner') {
+    const code = SYNC.profile?.user_code || '------';
+    const pausedLabel = SYNC.paused ? 'in pausa' : 'attiva';
+    const pausedClass = SYNC.paused ? 'paused' : 'active';
+    return `
+      <div class="card-eyebrow" style="margin:4px 4px 8px">condivisione</div>
+      <div class="share-card">
+        <div class="share-label">Il tuo codice da dare al partner</div>
+        <div class="share-code">${code}</div>
+        <div class="share-hint">Solo chi ha questo codice può vedere i tuoi dati.</div>
+        <div class="share-toggle-row">
+          <div>
+            <div class="share-toggle-label">Condivisione</div>
+            <div class="share-toggle-state ${pausedClass}">${pausedLabel}</div>
+          </div>
+          <button class="share-toggle ${SYNC.paused ? '' : 'on'}" onclick="toggleShare()">
+            <div class="share-toggle-knob"></div>
+          </button>
+        </div>
+        <button class="share-unlink" onclick="confirmUnpair()">Disattiva sincronizzazione</button>
+      </div>`;
+  }
+
+  // partner
+  const ownerName = SYNC.ownerProfile?.display_name || 'Giada';
+  const pausedNote = SYNC.paused
+    ? `<div class="share-note paused">${ownerName} ha messo in pausa la condivisione. I dati che vedi sono quelli dell'ultima volta.</div>`
+    : `<div class="share-note">Stai vedendo i dati di ${ownerName} in sola lettura. Si aggiornano da soli.</div>`;
+  return `
+    <div class="card-eyebrow" style="margin:4px 4px 8px">modalità partner</div>
+    <div class="share-card partner">
+      ${pausedNote}
+      <button class="share-row" onclick="forcePull()">
+        <div><div class="set-row-label">Aggiorna ora</div><div class="set-row-sub">Forza la sincronizzazione</div></div>
+        <span style="color:var(--text-light)">↻</span>
+      </button>
+      <button class="share-unlink" onclick="confirmUnpair()">Scollegami</button>
+    </div>`;
+}
+
+async function toggleShare() {
+  if (SYNC.role !== 'owner') return;
+  try {
+    await syncSetPaused(!SYNC.paused);
+    toast(SYNC.paused ? 'Condivisione in pausa' : 'Condivisione riattivata');
+    renderSettings();
+  } catch(e) {
+    toast('Errore: ' + e.message);
+  }
+}
+
+function forcePull() {
+  if (typeof syncPullAll === 'function') {
+    syncPullAll().then(() => toast('Dati aggiornati'));
+  }
+}
+
+function confirmUnpair() {
+  const msg = SYNC.role === 'owner'
+    ? 'Vuoi disattivare la sincronizzazione? I tuoi dati restano sul telefono ma non saranno più condivisi con il partner.'
+    : 'Vuoi scollegarti da Giada? I dati salvati localmente saranno cancellati.';
+  showConfirm('Conferma', msg, () => {
+    if (typeof syncReset === 'function') syncReset();
+    if (SYNC.role !== 'owner') {
+      // partner: pulisco i dati copia
+      DATA = { meals:[], measurements:[], settings: DATA.settings || {} };
+      saveData();
+    }
+    location.reload();
+  });
 }
 
 function selectPalette(id) {
@@ -442,8 +526,14 @@ function closeConfirm() {
 function init() {
   applyTheme(CURRENT_THEME);
   loadData();
-  renderHeader();
-  renderHome();
+
+  // Decido se mostrare welcome o partire
+  if (typeof isUnpaired === 'function' && isUnpaired()) {
+    showWelcome();
+  } else {
+    onSyncReady();
+  }
+
   // Listener per la glicemia
   const gv = document.getElementById('glucValue');
   if (gv) gv.addEventListener('input', showGlucFeedback);
@@ -451,6 +541,7 @@ function init() {
   document.addEventListener('click', function(e) {
     const chip = e.target.closest('.keto-chip');
     if (!chip || !chip.parentElement || chip.parentElement.id !== 'ketoGrid') return;
+    if (typeof isPartnerMode === 'function' && isPartnerMode()) return;
     selectKeto(chip);
   });
   // Aggiorna l'header ogni minuto
@@ -488,6 +579,18 @@ function applyUpdate() {
     navigator.serviceWorker.getRegistration().then(reg => {
       if (reg && reg.waiting) reg.waiting.postMessage({ type: 'SKIP_WAITING' });
     });
+  }
+}
+
+function onSyncReady() {
+  // applico classi al body per stilizzare partner-mode
+  document.body.classList.toggle('partner-mode', typeof isPartnerMode === 'function' && isPartnerMode());
+  document.body.classList.toggle('owner-mode', typeof isOwnerMode === 'function' && isOwnerMode());
+  renderHeader();
+  renderHome();
+  // se partner, avvia il polling
+  if (typeof isPartnerMode === 'function' && isPartnerMode()) {
+    startPartnerSync();
   }
 }
 

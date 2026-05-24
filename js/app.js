@@ -4,7 +4,7 @@
    ========================================================= */
 'use strict';
 
-const APP_VERSION = '1.1.1';
+const APP_VERSION = '1.2.0';
 console.log('%c GIADA · v' + APP_VERSION + ' ', 'background:#7A9978;color:white;padding:4px 8px;border-radius:4px;font-weight:bold;');
 
 /* ---------- STORAGE ---------- */
@@ -122,12 +122,24 @@ function renderHeader() {
   if (h>=12 && h<18) e = 'buon pomeriggio';
   else if (h>=18) e = 'buonasera';
   else if (h<6) e = 'è ancora notte';
+
+  let nameForGreeting = 'Giada';
+  let subline = '';
+  if (typeof SYNC !== 'undefined' && SYNC && SYNC.role === 'partner') {
+    nameForGreeting = SYNC.profile?.display_name || 'tu';
+    const ownerName = SYNC.ownerProfile?.display_name || 'Giada';
+    subline = SYNC.paused ? `dati di ${ownerName} · condivisione in pausa` : `i dati di ${ownerName}`;
+  } else if (typeof SYNC !== 'undefined' && SYNC && SYNC.role === 'owner') {
+    nameForGreeting = SYNC.profile?.display_name || 'Giada';
+  }
+
   const titleEl = document.getElementById('hdrTitle');
-  if (titleEl) titleEl.textContent = e + ', Giada';
+  if (titleEl) titleEl.textContent = e + ', ' + nameForGreeting;
   const M = ['gennaio','febbraio','marzo','aprile','maggio','giugno','luglio','agosto','settembre','ottobre','novembre','dicembre'];
   const D = ['domenica','lunedì','martedì','mercoledì','giovedì','venerdì','sabato'];
   const n = new Date();
-  document.getElementById('hdrEyebrow').textContent = D[n.getDay()] + ' ' + n.getDate() + ' ' + M[n.getMonth()];
+  const ebEl = document.getElementById('hdrEyebrow');
+  if (ebEl) ebEl.textContent = subline || (D[n.getDay()] + ' ' + n.getDate() + ' ' + M[n.getMonth()]);
   const vEl = document.getElementById('hdrVersion');
   if (vEl) vEl.textContent = 'v' + APP_VERSION;
 }

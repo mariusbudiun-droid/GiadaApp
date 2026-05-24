@@ -54,6 +54,9 @@ function renderPasti() {
 
 /* ---------- DETTAGLIO PASTO ---------- */
 function openMeal(slotId) {
+  if (typeof isPartnerMode === 'function' && isPartnerMode()) {
+    return openMealReadOnly(slotId);
+  }
   currentMeal = slotId;
   const today = todayStr();
   const ex = DATA.meals.find(m => dateOf(m.ts) === today && m.mealId === slotId);
@@ -67,6 +70,42 @@ function openMeal(slotId) {
   document.getElementById('mealDetailTitle').textContent = slot.name;
 
   renderMealDetail();
+}
+
+function openMealReadOnly(slotId) {
+  const today = todayStr();
+  const ex = DATA.meals.find(m => dateOf(m.ts) === today && m.mealId === slotId);
+  const items = ex && ex.items ? ex.items : [];
+
+  document.getElementById('mealList').classList.add('hidden');
+  document.getElementById('mealDetail').classList.remove('hidden');
+
+  const slot = SLOT_BY_ID[slotId];
+  document.getElementById('mealDetailEyebrow').textContent = slot.time + ' · vista partner';
+  document.getElementById('mealDetailTitle').textContent = slot.name;
+
+  const c = document.getElementById('mealSlots');
+  let html = '';
+  if (items.length === 0) {
+    html = `<div class="empty-meal"><div class="empty-meal-emoji">🍽️</div><div>Nessun alimento ancora registrato.</div></div>`;
+  } else {
+    html += `<div class="meal-items">`;
+    items.forEach(it => {
+      const f = FOOD_BY_ID[it.foodId];
+      if (!f) return;
+      html += `<div class="meal-item readonly">
+        <div class="meal-item-main">
+          <div class="meal-item-name">${escapeHtml(f.name)}</div>
+        </div>
+        <div class="meal-item-qty-readonly">${it.qty}<span class="qty-unit">${f.unit}</span></div>
+      </div>`;
+    });
+    html += `</div>`;
+  }
+  c.innerHTML = html;
+  // Nascondo eventuale hint autosave
+  const hint = document.querySelector('.autosave-hint');
+  if (hint) hint.style.display = 'none';
 }
 
 function closeMealDetail() {
@@ -158,8 +197,13 @@ function removeItem(idx) {
 function autoSave() {
   const today = todayStr();
   const ix = DATA.meals.findIndex(m => dateOf(m.ts) === today && m.mealId === currentMeal);
+  let deletedId = null;
+  let pushedMeal = null;
   if (currentItems.length === 0) {
-    if (ix >= 0) { DATA.meals.splice(ix, 1); }
+    if (ix >= 0) {
+      deletedId = DATA.meals[ix].id;
+      DATA.meals.splice(ix, 1);
+    }
   } else {
     const e = {
       id: ix >= 0 ? DATA.meals[ix].id : uid(),
@@ -168,8 +212,14 @@ function autoSave() {
       items: JSON.parse(JSON.stringify(currentItems))
     };
     if (ix >= 0) DATA.meals[ix] = e; else DATA.meals.push(e);
+    pushedMeal = e;
   }
   saveData();
+  // sync
+  if (typeof syncPushMeal === 'function') {
+    if (deletedId) syncDeleteMeal(deletedId);
+    if (pushedMeal) syncPushMeal(pushedMeal);
+  }
   // ricarico home se è visibile (per le pills)
   if (typeof renderHome === 'function') {
     try { renderHome(); } catch(_) {}
