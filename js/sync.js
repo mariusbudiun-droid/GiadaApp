@@ -209,8 +209,10 @@ async function syncPullAll() {
   try {
     await syncRefreshPausedState();
     if (SYNC.paused) {
-      // se in pausa, non aggiorno (mantengo l'ultima snapshot)
+      // se in pausa, non aggiorno dati clinici, ma le note sì (sono comunicazione, non dati medici)
+      await syncPullNotes();
       syncIsPulling = false;
+      try { if (typeof renderHome === 'function') renderHome(); } catch(_){}
       return;
     }
     const ownerId = SYNC.ownerProfile.id;
@@ -237,6 +239,9 @@ async function syncPullAll() {
     SYNC.lastPull = Date.now();
     saveSync();
 
+    // Refresh note
+    await syncPullNotes();
+
     // Refresh UI
     try { if (typeof renderHome === 'function') renderHome(); } catch(_){}
     try { if (typeof renderDiary === 'function') renderDiary(); } catch(_){}
@@ -260,11 +265,126 @@ function startPartnerSync() {
   });
 }
 
+/* ---------- NOTE: lavagnetta condivisa ---------- */
+/* Le note vivono dentro profiles.note + profiles.note_updated_at
+   Owner vede la nota del partner, partner vede la nota dell'owner.
+   Owner deve trovare il partner via tabella pairings. */
+
+let notePushTimer = null;
+let notePollTimer = null;
+
+async function syncPushMyNote(text) {
+  if (!SYNC.profile) return;
+  const body = {
+    note: text || null,
+    note_updated_at: new Date().toISOString()
+  };
+  try {
+    await supaReq('profiles?id=eq.' + SYNC.profile.id, {
+      method: 'PATCH',
+      body,
+      prefer: 'return=minimal'
+    });
+    // aggiorno cache locale
+    SYNC.profile.note = text || null;
+    SYNC.profile.note_updated_at = body.note_updated_at;
+    saveSync();
+  } catch(e) { console.warn('push note failed', e); }
+}
+
+/* Owner: trova partner id la prima volta che ne ha bisogno */
+async function syncResolveOwnerPartner() {
+  if (SYNC.role !== 'owner' || !SYNC.profile) return null;
+  if (SYNC.partnerProfile) return SYNC.partnerProfile;
+  try {
+    const pairs = await supaReq('pairings?owner_id=eq.' + SYNC.profile.id + '&select=partner_id');
+    if (!pairs || pairs.length === 0) return null;
+    const partnerId = pairs[0].partner_id;
+    const profs = await supaReq('profiles?id=eq.' + partnerId + '&select=*');
+    if (profs && profs.length) {
+      SYNC.partnerProfile = profs[0];
+      saveSync();
+      return SYNC.partnerProfile;
+    }
+  } catch(e) { console.warn('resolve partner failed', e); }
+  return null;
+}
+
+/* Scarica la nota del "remoto" (cioè dell'altro) */
+async function syncPullNotes() {
+  try {
+    if (SYNC.role === 'partner' && SYNC.ownerProfile) {
+      const r = await supaReq('profiles?id=eq.' + SYNC.ownerProfile.id + '&select=note,note_updated_at,display_name');
+      if (r && r.length) {
+        SYNC.ownerProfile.note = r[0].note;
+        SYNC.ownerProfile.note_updated_at = r[0].note_updated_at;
+        SYNC.ownerProfile.display_name = r[0].display_name || SYNC.ownerProfile.display_name;
+        saveSync();
+      }
+    } else if (SYNC.role === 'owner') {
+      const partner = await syncResolveOwnerPartner();
+      if (partner) {
+        const r = await supaReq('profiles?id=eq.' + partner.id + '&select=note,note_updated_at,display_name');
+        if (r && r.length) {
+          SYNC.partnerProfile.note = r[0].note;
+          SYNC.partnerProfile.note_updated_at = r[0].note_updated_at;
+          SYNC.partnerProfile.display_name = r[0].display_name || SYNC.partnerProfile.display_name;
+          saveSync();
+        }
+      }
+    }
+  } catch(e) { console.warn('pull notes failed', e); }
+}
+
+/* Avvia polling note (anche per owner, che non ha syncPullAll) */
+function startNotePolling() {
+  if (!SYNC.role) return;
+  if (notePollTimer) clearInterval(notePollTimer);
+  syncPullNotes().then(() => {
+    try { if (typeof renderHome === 'function') renderHome(); } catch(_){}
+  });
+  notePollTimer = setInterval(() => {
+    syncPullNotes().then(() => {
+      try { if (typeof renderHome === 'function') renderHome(); } catch(_){}
+    });
+  }, 30 * 1000);
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) {
+      syncPullNotes().then(() => {
+        try { if (typeof renderHome === 'function') renderHome(); } catch(_){}
+      });
+    }
+  });
+}
+
+/* Push con debounce - chiamato mentre digiti */
+function scheduleNotePush(text) {
+  if (notePushTimer) clearTimeout(notePushTimer);
+  notePushTimer = setTimeout(() => syncPushMyNote(text), 800);
+}
+
+/* Ritorna {mine, theirs, theirsName, theirsUpdatedAt, role} */
+function getNotesState() {
+  const mine = SYNC.profile?.note || '';
+  let theirs = null, theirsName = '', theirsUpdatedAt = null;
+  if (SYNC.role === 'partner') {
+    theirs = SYNC.ownerProfile?.note || '';
+    theirsName = SYNC.ownerProfile?.display_name || 'Giada';
+    theirsUpdatedAt = SYNC.ownerProfile?.note_updated_at || null;
+  } else if (SYNC.role === 'owner' && SYNC.partnerProfile) {
+    theirs = SYNC.partnerProfile?.note || '';
+    theirsName = SYNC.partnerProfile?.display_name || 'lui';
+    theirsUpdatedAt = SYNC.partnerProfile?.note_updated_at || null;
+  }
+  return { mine, theirs, theirsName, theirsUpdatedAt, role: SYNC.role };
+}
+
 /* ---------- RESET ---------- */
 function syncReset() {
-  SYNC = { role:null, profile:null, ownerProfile:null, paused:false, lastPull:0 };
+  SYNC = { role:null, profile:null, ownerProfile:null, partnerProfile:null, paused:false, lastPull:0 };
   saveSync();
   if (syncPullTimer) { clearInterval(syncPullTimer); syncPullTimer = null; }
+  if (notePollTimer) { clearInterval(notePollTimer); notePollTimer = null; }
 }
 
 function isPartnerMode() { return SYNC.role === 'partner'; }

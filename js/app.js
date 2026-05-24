@@ -4,7 +4,7 @@
    ========================================================= */
 'use strict';
 
-const APP_VERSION = '1.2.0';
+const APP_VERSION = '1.3.0';
 console.log('%c GIADA · v' + APP_VERSION + ' ', 'background:#7A9978;color:white;padding:4px 8px;border-radius:4px;font-weight:bold;');
 
 /* ---------- STORAGE ---------- */
@@ -192,6 +192,131 @@ function renderHome() {
   if (lk) { ke.textContent = ketoLabel(lk.value); ke.classList.remove('empty'); ke.style.fontSize = '18px'; }
   else { ke.textContent = '—'; ke.classList.add('empty'); }
   document.getElementById('m-timing').textContent = getTimingForToday() + 'h';
+
+  // Lavagnetta
+  if (typeof renderNotesBoard === 'function') renderNotesBoard();
 }
 
 function ketoLabel(v) { return { 0:'Negativo', 5:'Tracce', 15:'+', 40:'++', 80:'+++', 160:'++++' }[v] || ('+ '+v); }
+
+/* ---------- LAVAGNETTA ---------- */
+function renderNotesBoard() {
+  const c = document.getElementById('notesBoard');
+  if (!c) return;
+  if (typeof getNotesState !== 'function') { c.innerHTML = ''; return; }
+  const st = getNotesState();
+  if (!st.role) { c.innerHTML = ''; return; }
+
+  // Se l'utente sta scrivendo, non sovrascrivere il textarea — aggiorno solo la bolla "theirs"
+  const ta = document.getElementById('myNoteText');
+  if (ta && document.activeElement === ta) {
+    updateOnlyTheirBubble(st);
+    return;
+  }
+
+  const myName = (SYNC.profile && SYNC.profile.display_name) || 'io';
+  // I miei messaggi: il loro nome è "tu" stilizzato
+  const partnerLabel = st.theirsName || (st.role === 'partner' ? 'Giada' : 'lui');
+
+  const mineText = st.mine || '';
+  const theirsText = (st.theirs || '').trim();
+  const ago = st.theirsUpdatedAt ? timeAgo(new Date(st.theirsUpdatedAt).getTime()) : '';
+
+  // Card collassabile, mostro sempre quella dell'altro se ha scritto, e poi la mia editabile
+  const theirsBlock = theirsText
+    ? `<div class="note-bubble theirs">
+         <div class="note-bubble-head">
+           <span class="note-bubble-from">da ${escapeHtml(partnerLabel)}</span>
+           ${ago ? `<span class="note-bubble-when">${ago}</span>` : ''}
+         </div>
+         <div class="note-bubble-text">${escapeHtml(theirsText)}</div>
+       </div>`
+    : `<div class="note-bubble theirs empty">
+         <div class="note-bubble-text muted">${escapeHtml(partnerLabel)} non ha ancora scritto niente.</div>
+       </div>`;
+
+  const placeholder = st.role === 'partner'
+    ? `Scrivi qualcosa a ${escapeHtml(partnerLabel)}…`
+    : `Scrivi qualcosa a ${escapeHtml(partnerLabel)}…`;
+
+  const mineBlock = `
+    <div class="note-bubble mine">
+      <div class="note-bubble-head">
+        <span class="note-bubble-from">tu</span>
+        <span class="note-bubble-status" id="noteStatus"></span>
+      </div>
+      <textarea class="note-textarea" id="myNoteText"
+        maxlength="280"
+        placeholder="${placeholder}"
+        rows="2"
+      >${escapeHtml(mineText)}</textarea>
+      <div class="note-foot">
+        <span class="note-count"><span id="noteCount">${mineText.length}</span>/280</span>
+      </div>
+    </div>`;
+
+  c.innerHTML = `
+    <div class="card-eyebrow eb-spaced">tra di noi</div>
+    <div class="notes-board">
+      ${theirsBlock}
+      ${mineBlock}
+    </div>`;
+
+  // Listener: salvataggio con debounce
+  const taNew = document.getElementById('myNoteText');
+  const cnt = document.getElementById('noteCount');
+  const status = document.getElementById('noteStatus');
+  if (taNew) {
+    taNew.addEventListener('input', () => {
+      cnt.textContent = taNew.value.length;
+      if (status) status.textContent = 'in salvataggio…';
+      if (typeof scheduleNotePush === 'function') {
+        scheduleNotePush(taNew.value);
+        // mostra "salvato" dopo il debounce + un piccolo margine
+        setTimeout(() => { if (status) status.textContent = 'salvato'; setTimeout(() => { if (status) status.textContent = ''; }, 1200); }, 1000);
+      }
+    });
+    // auto-grow leggero
+    taNew.addEventListener('input', autoResizeTextarea);
+    autoResizeTextarea({ target: taNew });
+  }
+}
+
+function autoResizeTextarea(e) {
+  const ta = e.target;
+  ta.style.height = 'auto';
+  ta.style.height = Math.min(ta.scrollHeight, 160) + 'px';
+}
+
+function updateOnlyTheirBubble(st) {
+  const board = document.querySelector('#notesBoard .notes-board');
+  if (!board) return;
+  const theirs = board.querySelector('.note-bubble.theirs');
+  if (!theirs) return;
+  const partnerLabel = st.theirsName || 'lui';
+  const theirsText = (st.theirs || '').trim();
+  const ago = st.theirsUpdatedAt ? timeAgo(new Date(st.theirsUpdatedAt).getTime()) : '';
+  if (theirsText) {
+    theirs.classList.remove('empty');
+    theirs.innerHTML = `
+      <div class="note-bubble-head">
+        <span class="note-bubble-from">da ${escapeHtml(partnerLabel)}</span>
+        ${ago ? `<span class="note-bubble-when">${ago}</span>` : ''}
+      </div>
+      <div class="note-bubble-text">${escapeHtml(theirsText)}</div>`;
+  } else {
+    theirs.classList.add('empty');
+    theirs.innerHTML = `<div class="note-bubble-text muted">${escapeHtml(partnerLabel)} non ha ancora scritto niente.</div>`;
+  }
+}
+
+function timeAgo(ts) {
+  const diff = Math.floor((Date.now() - ts) / 1000);
+  if (diff < 60) return 'adesso';
+  if (diff < 3600) return Math.floor(diff/60) + ' min fa';
+  if (diff < 86400) return Math.floor(diff/3600) + 'h fa';
+  if (diff < 172800) return 'ieri';
+  const d = new Date(ts);
+  const M = ['gen','feb','mar','apr','mag','giu','lug','ago','set','ott','nov','dic'];
+  return d.getDate() + ' ' + M[d.getMonth()];
+}

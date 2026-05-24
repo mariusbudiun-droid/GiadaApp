@@ -588,9 +588,13 @@ function onSyncReady() {
   document.body.classList.toggle('owner-mode', typeof isOwnerMode === 'function' && isOwnerMode());
   renderHeader();
   renderHome();
-  // se partner, avvia il polling
+  // se partner, avvia il polling dati
   if (typeof isPartnerMode === 'function' && isPartnerMode()) {
     startPartnerSync();
+  }
+  // polling note (sia owner che partner)
+  if (typeof startNotePolling === 'function') {
+    startNotePolling();
   }
 }
 
