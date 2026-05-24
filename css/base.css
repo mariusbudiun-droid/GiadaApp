@@ -635,3 +635,209 @@ input[type="number"] { -moz-appearance: textfield; }
   border-radius: 8px; letter-spacing: .02em;
   font-weight: 600;
 }
+
+/* ============== WELCOME ============== */
+.welcome-overlay {
+  position: fixed; inset: 0; z-index: 9999;
+  background: var(--bg);
+  display: none;
+  align-items: center; justify-content: center;
+  padding: 24px 18px;
+  overflow-y: auto;
+}
+.welcome-overlay.show { display: flex; }
+.welcome-card {
+  width: 100%; max-width: 420px;
+  background: var(--surface);
+  border-radius: 22px;
+  padding: 28px 22px 22px;
+  border: 1px solid var(--border);
+  position: relative;
+}
+.welcome-back {
+  position: absolute; top: 14px; left: 14px;
+  background: transparent; border: none;
+  font-size: 22px; color: var(--text-medium);
+  width: 36px; height: 36px;
+  display: flex; align-items: center; justify-content: center;
+}
+.welcome-eyebrow {
+  font-family: var(--serif); font-style: italic; font-size: 14px;
+  color: var(--accent-dark); letter-spacing: .02em;
+  margin-bottom: 4px; text-align: center;
+}
+.welcome-title {
+  font-family: var(--serif); font-size: 38px; font-weight: 500;
+  letter-spacing: -.02em; line-height: 1.1;
+  margin: 0 0 16px; text-align: center;
+}
+.welcome-h2 {
+  font-family: var(--serif); font-size: 22px; font-weight: 500;
+  margin: 4px 0 10px; line-height: 1.25; text-align: center;
+}
+.welcome-body {
+  color: var(--text-medium); font-size: 14px; line-height: 1.5;
+  text-align: center; margin: 0 0 18px;
+}
+.welcome-body.small { font-size: 13px; margin-bottom: 14px; }
+.welcome-body.center { text-align: center; }
+.welcome-actions { display: flex; flex-direction: column; gap: 10px; margin-top: 4px; }
+.welcome-primary, .welcome-secondary {
+  width: 100%; padding: 14px 16px;
+  border-radius: 14px;
+  text-align: left;
+  transition: transform .1s, background .15s;
+  border: 1px solid transparent;
+}
+.welcome-primary {
+  background: var(--accent); color: #fff;
+}
+.welcome-primary:active { transform: scale(.99); }
+.welcome-secondary {
+  background: var(--surface); color: var(--text-dark);
+  border: 1px solid var(--border);
+}
+.welcome-secondary:active { background: var(--paper); }
+.welcome-btn-title { font-size: 16px; font-weight: 600; line-height: 1.2; }
+.welcome-btn-sub { font-size: 12px; opacity: .85; margin-top: 2px; line-height: 1.2; }
+.welcome-input {
+  width: 100%; box-sizing: border-box;
+  padding: 14px 14px;
+  background: var(--paper);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  font-size: 16px;
+  font-family: var(--sans);
+  color: var(--text-dark);
+  margin-bottom: 10px;
+  outline: none;
+}
+.welcome-input:focus { border-color: var(--accent); background: var(--surface); }
+.welcome-input.code-input {
+  font-family: var(--mono);
+  font-size: 22px; letter-spacing: .25em;
+  text-align: center;
+  font-weight: 600;
+}
+.welcome-foot {
+  font-size: 11px; color: var(--text-light);
+  text-align: center; margin: 12px 0 0;
+  line-height: 1.4;
+}
+.welcome-spinner {
+  width: 28px; height: 28px; margin: 8px auto 12px;
+  border: 3px solid var(--accent-soft);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin .8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ============== SHARE SECTION ============== */
+.share-card {
+  background: linear-gradient(135deg, var(--surface) 0%, var(--accent-soft) 100%);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 16px 16px 12px;
+  margin-bottom: 6px;
+}
+.share-card.partner {
+  background: var(--surface);
+}
+.share-label {
+  font-size: 12px; color: var(--text-medium);
+  letter-spacing: .04em; text-transform: uppercase;
+  margin-bottom: 6px;
+}
+.share-code {
+  font-family: var(--mono);
+  font-size: 30px; font-weight: 700;
+  letter-spacing: .18em;
+  color: var(--accent-dark);
+  background: var(--surface);
+  padding: 12px 8px;
+  border-radius: 10px;
+  text-align: center;
+  margin-bottom: 10px;
+  user-select: all; -webkit-user-select: all;
+}
+.share-hint {
+  font-size: 12px; color: var(--text-medium);
+  line-height: 1.4; margin-bottom: 14px;
+}
+.share-toggle-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 0; border-top: 1px solid var(--border);
+}
+.share-toggle-label { font-size: 14px; color: var(--text-dark); font-weight: 600; }
+.share-toggle-state { font-size: 12px; color: var(--text-medium); margin-top: 1px; }
+.share-toggle-state.active { color: var(--accent-dark); }
+.share-toggle-state.paused { color: var(--warn-text); }
+.share-toggle {
+  width: 50px; height: 28px;
+  background: var(--border-strong); border-radius: 14px;
+  border: none; position: relative;
+  transition: background .2s;
+  padding: 0;
+}
+.share-toggle.on { background: var(--accent); }
+.share-toggle-knob {
+  width: 22px; height: 22px;
+  background: #fff; border-radius: 50%;
+  position: absolute; top: 3px; left: 3px;
+  transition: left .2s;
+  box-shadow: 0 1px 3px rgba(0,0,0,.2);
+}
+.share-toggle.on .share-toggle-knob { left: 25px; }
+.share-unlink {
+  width: 100%; padding: 10px;
+  background: transparent;
+  border: none;
+  color: var(--alert-text, #C24A3D);
+  font-size: 13px;
+  margin-top: 6px;
+}
+.share-row {
+  width: 100%; display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 4px; background: transparent; border: none;
+  border-top: 1px solid var(--border);
+  text-align: left;
+}
+.share-note {
+  background: var(--paper); border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 13px; color: var(--text-medium); line-height: 1.4;
+  margin-bottom: 8px;
+}
+.share-note.paused {
+  background: var(--warn-bg); color: var(--warn-text);
+  border: 1px solid var(--warn-border);
+}
+
+/* ============== PARTNER MODE ============== */
+body.partner-mode .add-item-btn,
+body.partner-mode .save-btn,
+body.partner-mode .qty-btn,
+body.partner-mode .meal-item-del,
+body.partner-mode .timing-toggle,
+body.partner-mode .meas-tabs,
+body.partner-mode #measGlicemia,
+body.partner-mode #measChetoni,
+body.partner-mode .autosave-hint {
+  display: none !important;
+}
+body.partner-mode .meal-item.readonly { padding-right: 14px; }
+body.partner-mode .meal-item-qty-readonly {
+  font-family: var(--mono); font-size: 14px; font-weight: 600;
+  color: var(--text-medium);
+  padding: 6px 10px;
+  background: var(--paper);
+  border-radius: 10px;
+}
+body.partner-mode #sec-misurazioni .content::before {
+  content: 'Le misurazioni le inserisce Giada dal suo telefono.';
+  display: block;
+  padding: 18px; background: var(--paper); border-radius: 12px;
+  color: var(--text-medium); font-size: 13px; text-align: center;
+  line-height: 1.5;
+}
