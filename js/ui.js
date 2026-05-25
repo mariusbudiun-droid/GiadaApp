@@ -352,6 +352,10 @@ function renderShareSection() {
             <div class="share-toggle-knob"></div>
           </button>
         </div>
+        <button class="share-row" onclick="forceBackfill()">
+          <div><div class="set-row-label">Risincronizza tutto</div><div class="set-row-sub">Carica al cloud tutto quello che hai in locale</div></div>
+          <span style="color:var(--text-light)">↑</span>
+        </button>
         <button class="share-unlink" onclick="confirmUnpair()">Disattiva sincronizzazione</button>
       </div>`;
   }
@@ -387,6 +391,17 @@ async function toggleShare() {
 function forcePull() {
   if (typeof syncPullAll === 'function') {
     syncPullAll().then(() => toast('Dati aggiornati'));
+  }
+}
+
+async function forceBackfill() {
+  if (typeof syncBackfillAll !== 'function') return;
+  toast('Sincronizzazione in corso…');
+  try {
+    await syncBackfillAll();
+    toast('Tutto sincronizzato sul cloud');
+  } catch(e) {
+    toast('Errore: ' + (e.message || 'riprova'));
   }
 }
 
