@@ -189,7 +189,7 @@ function renderDiario() {
 function renderEntry(e) {
   if (e.type === 'meas') {
     if (e.kind === 'glicemia') {
-      const sk = { digiuno:'glicemia a digiuno', colazione:'dopo colazione', pranzo:'dopo pranzo', cena:'dopo cena' }[e.subkind];
+      const sk = { digiuno:'glicemia a digiuno', colazione:'dopo colazione', pranzo:'dopo pranzo', cena:'dopo cena' }[e.subkind] || 'glicemia';
       const tg = e.timing ? ' ('+e.timing+'h)' : '';
       return `<div class="diary-entry"><div class="diary-time">${fmtTime(e.ts)}</div><div class="diary-body"><div class="diary-kind">${sk}${tg}</div><div class="diary-content"><span class="diary-value">${e.value}</span> mg/dL</div>${e.note ? `<div class="diary-note">"${escapeHtml(e.note)}"</div>` : ''}</div><button class="diary-del" onclick="confirmDelMeas('${e.id}')">×</button></div>`;
     } else {

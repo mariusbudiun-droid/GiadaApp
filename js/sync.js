@@ -166,6 +166,7 @@ async function syncPushMeasurement(m) {
     owner_id: SYNC.profile.id,
     local_id: m.id,
     kind: m.kind,
+    subkind: m.subkind || null,
     ts: m.ts,
     value: m.value,
     timing: m.timing || null,
@@ -233,6 +234,7 @@ async function syncPullAll() {
       id: r.local_id,
       ts: Number(r.ts),
       kind: r.kind,
+      subkind: r.subkind || undefined,
       value: r.value != null ? Number(r.value) : null,
       timing: r.timing || undefined,
       note: r.note || undefined
