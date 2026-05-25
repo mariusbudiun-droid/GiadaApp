@@ -9,6 +9,11 @@ let glucKind = null;
 let ketoChoice = null;
 
 function renderMisurazioni() {
+  // Modalità partner: mostro solo lista di sola lettura
+  if (typeof isPartnerMode === 'function' && isPartnerMode()) {
+    renderPartnerMisurazioni();
+    return;
+  }
   const t = getTimingForToday();
   document.querySelectorAll('.timing-opt').forEach(b => b.classList.toggle('active', parseInt(b.dataset.t) === t));
   document.getElementById('lblColazione').textContent = t+'h dal pasto';
@@ -16,6 +21,49 @@ function renderMisurazioni() {
   document.getElementById('lblCena').textContent = t+'h dal pasto';
   switchMeasTab('glicemia');
   closeGluc();
+}
+
+function renderPartnerMisurazioni() {
+  const c = document.getElementById('partnerMeas');
+  if (!c) return;
+  const today = todayStr();
+  const todayMeas = DATA.measurements
+    .filter(m => dateOf(m.ts) === today)
+    .sort((a,b) => a.ts - b.ts);
+
+  const ownerName = (typeof SYNC !== 'undefined' && SYNC.ownerProfile?.display_name) || 'Giada';
+
+  let html = `<div class="card-eyebrow">misurazioni di oggi · ${escapeHtml(ownerName)}</div>`;
+
+  if (todayMeas.length === 0) {
+    html += `<div class="partner-meas-empty">Nessuna misurazione registrata oggi.<br>Compariranno qui appena ${escapeHtml(ownerName)} le inserisce.</div>`;
+  } else {
+    const skLabel = { digiuno:'a digiuno', colazione:'dopo colazione', pranzo:'dopo pranzo', cena:'dopo cena' };
+    todayMeas.forEach(m => {
+      const time = fmtTime(m.ts);
+      let label, valueHtml, unit;
+      if (m.kind === 'glicemia') {
+        const sk = skLabel[m.subkind] || 'glicemia';
+        const tg = m.timing ? ` (${m.timing}h)` : '';
+        label = sk + tg;
+        valueHtml = `<span class="partner-meas-value">${m.value}</span><span class="partner-meas-unit">mg/dL</span>`;
+      } else {
+        label = 'chetoni';
+        valueHtml = `<span class="partner-meas-value" style="font-size:18px">${ketoLabel(m.value)}</span>`;
+      }
+      const noteHtml = m.note ? `<div class="partner-meas-note">"${escapeHtml(m.note)}"</div>` : '';
+      html += `<div class="partner-meas-card">
+        <div class="partner-meas-main">
+          <div class="partner-meas-label">${label}</div>
+          <div class="partner-meas-time">${time}</div>
+          ${noteHtml}
+        </div>
+        <div class="partner-meas-value-block">${valueHtml}</div>
+      </div>`;
+    });
+  }
+
+  c.innerHTML = html;
 }
 
 function getTimingForToday() {
@@ -201,6 +249,7 @@ function renderEntry(e) {
     let items = [];
     if (e.items && e.items.length) {
       items = e.items.map(it => {
+        if (it.custom) return `${it.custom.name} (${it.qty}${it.custom.unit})`;
         const f = FOOD_BY_ID[it.foodId];
         if (!f) return null;
         return `${f.name} (${it.qty}${f.unit})`;
@@ -492,6 +541,10 @@ function exportDiarioTxt() {
         txt += `${t}  ${slot ? slot.name : 'Pasto'}:\n`;
         if (e.items && e.items.length) {
           e.items.forEach(it => {
+            if (it.custom) {
+              txt += `    · ${it.custom.name} ${it.qty}${it.custom.unit}\n`;
+              return;
+            }
             const f = FOOD_BY_ID[it.foodId];
             if (!f) return;
             txt += `    · ${f.name} ${it.qty}${f.unit}\n`;

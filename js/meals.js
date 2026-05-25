@@ -35,6 +35,7 @@ function renderPasti() {
     let preview = '';
     if (hasItems) {
       const names = items.slice(0,3).map(it => {
+        if (it.custom) return it.custom.name.split(' ')[0];
         const f = FOOD_BY_ID[it.foodId];
         return f ? f.name.split(' ')[0] : '';
       }).filter(Boolean).join(' · ');
@@ -101,6 +102,15 @@ function openMealReadOnly(slotId) {
     if (items.length > 0) {
       html += `<div class="meal-items">`;
       items.forEach(it => {
+        if (it.custom) {
+          html += `<div class="meal-item readonly">
+            <div class="meal-item-main">
+              <div class="meal-item-name">${escapeHtml(it.custom.name)} <span class="meal-item-custom-tag">aggiunto</span></div>
+            </div>
+            <div class="meal-item-qty-readonly">${it.qty}<span class="qty-unit">${escapeHtml(it.custom.unit)}</span></div>
+          </div>`;
+          return;
+        }
         const f = FOOD_BY_ID[it.foodId];
         if (!f) return;
         html += `<div class="meal-item readonly">
@@ -159,6 +169,10 @@ function renderMealDetail() {
   } else {
     html += `<div class="meal-items">`;
     currentItems.forEach((it, idx) => {
+      if (it.custom) {
+        html += renderMealItem(null, it, idx);
+        return;
+      }
       const f = FOOD_BY_ID[it.foodId];
       if (!f) return;
       html += renderMealItem(f, it, idx);
@@ -228,6 +242,21 @@ function renderMealDetail() {
 }
 
 function renderMealItem(f, it, idx) {
+  // Custom item
+  if (it.custom) {
+    return `
+      <div class="meal-item">
+        <div class="meal-item-main">
+          <div class="meal-item-name">${escapeHtml(it.custom.name)} <span class="meal-item-custom-tag">tuo</span></div>
+        </div>
+        <div class="meal-item-qty">
+          <button class="qty-btn" onclick="adjustQty(${idx}, -1)">−</button>
+          <span class="qty-val">${it.qty}<span class="qty-unit">${escapeHtml(it.custom.unit)}</span></span>
+          <button class="qty-btn" onclick="adjustQty(${idx}, 1)">+</button>
+        </div>
+        <button class="meal-item-del" onclick="removeItem(${idx})" aria-label="rimuovi">✕</button>
+      </div>`;
+  }
   const tip = f.tip ? `<div class="meal-item-tip">${f.tip}</div>` : '';
   const warn = f.warn ? `<div class="meal-item-tip warn">${f.warn}</div>` : '';
   return `
@@ -248,10 +277,20 @@ function renderMealItem(f, it, idx) {
 function adjustQty(idx, sign) {
   const it = currentItems[idx];
   if (!it) return;
+  // Custom item: step fisso a 10 per g/ml, 1 per pezzi
+  if (it.custom) {
+    const step = it.custom.unit === 'pz' ? 1 : 10;
+    const next = it.qty + (sign * step);
+    if (next < step) return;
+    it.qty = next;
+    autoSave();
+    renderMealDetail();
+    return;
+  }
   const f = FOOD_BY_ID[it.foodId];
+  if (!f) return;
   const step = f.step || 10;
   const next = it.qty + (sign * step);
-  // minimo: 1 step. massimo: 5x default per sicurezza
   if (next < step) return;
   if (next > f.qty * 5 + step) return;
   it.qty = next;
@@ -334,6 +373,33 @@ function openFoodSheet() {
     html += `</div>`;
   }
 
+  // CUSTOM AGGIUNGI
+  html += `
+    <button class="custom-food-btn" onclick="openCustomFoodForm()">
+      <span class="custom-food-ico">+</span>
+      <span class="custom-food-text">
+        <span class="custom-food-title">Alimento mio</span>
+        <span class="custom-food-sub">aggiungi qualcosa fuori dalla dieta</span>
+      </span>
+    </button>
+    <div id="customFoodForm" class="hidden custom-food-form">
+      <div class="custom-food-row">
+        <input type="text" id="customFoodName" placeholder="Nome (es. Pizza margherita)" maxlength="80">
+      </div>
+      <div class="custom-food-row two">
+        <input type="number" id="customFoodQty" placeholder="quantità" inputmode="decimal" min="1" max="9999">
+        <select id="customFoodUnit">
+          <option value="g">g</option>
+          <option value="ml">ml</option>
+          <option value="pz">pezzi</option>
+        </select>
+      </div>
+      <div class="custom-food-actions">
+        <button class="custom-food-cancel" onclick="closeCustomFoodForm()">Annulla</button>
+        <button class="custom-food-save" onclick="saveCustomFood()">Aggiungi</button>
+      </div>
+    </div>`;
+
   // CATEGORIE
   order.forEach(cat => {
     const list = byCat[cat];
@@ -370,6 +436,40 @@ function addFood(foodId) {
 function closeSheet() {
   document.getElementById('sheetOverlay').classList.remove('open');
   document.getElementById('sheet').classList.remove('open');
+}
+
+/* ---------- CUSTOM FOOD ---------- */
+function openCustomFoodForm() {
+  const f = document.getElementById('customFoodForm');
+  if (f) f.classList.remove('hidden');
+  setTimeout(() => document.getElementById('customFoodName')?.focus(), 80);
+}
+
+function closeCustomFoodForm() {
+  const f = document.getElementById('customFoodForm');
+  if (f) f.classList.add('hidden');
+  const n = document.getElementById('customFoodName');
+  const q = document.getElementById('customFoodQty');
+  if (n) n.value = '';
+  if (q) q.value = '';
+}
+
+function saveCustomFood() {
+  const name = (document.getElementById('customFoodName')?.value || '').trim();
+  const qty = parseFloat(document.getElementById('customFoodQty')?.value || '');
+  const unit = document.getElementById('customFoodUnit')?.value || 'g';
+  if (!name) { toast('Scrivi un nome'); return; }
+  if (isNaN(qty) || qty <= 0) { toast('Quantità non valida'); return; }
+  const item = {
+    foodId: 'custom_' + uid(),
+    qty: qty,
+    custom: { name, unit }
+  };
+  currentItems.push(item);
+  autoSave();
+  closeSheet();
+  closeCustomFoodForm();
+  renderMealDetail();
 }
 
 /* ---------- SUGGERIMENTI CONTESTUALI ---------- */
