@@ -305,6 +305,12 @@ function openDayView(dayKey) {
         const tg = m.timing ? ` (${m.timing}h)` : '';
         lbl = sk + tg;
         valTxt = `${m.value} <span class="day-meas-unit">mg/dL</span>`;
+      } else if (m.kind === 'pressione') {
+        lbl = 'pressione';
+        valTxt = `${m.value}/${m.value2} <span class="day-meas-unit">mmHg</span>`;
+      } else if (m.kind === 'peso') {
+        lbl = 'peso';
+        valTxt = `${m.value} <span class="day-meas-unit">kg</span>`;
       } else {
         lbl = 'chetoni';
         valTxt = ketoLabel(m.value);
@@ -330,7 +336,26 @@ function openDayView(dayKey) {
 
   // AZIONE per future: aggiungi appuntamento
   if (!isPartner && !isPast) {
-    html += `<button class="add-appt-btn" onclick="closeSheet(); setTimeout(() => openApptForm(null, '${dayKey}'), 250);">+ aggiungi appuntamento per ${d.getTime() === today.getTime() ? 'oggi' : 'questo giorno'}</button>`;
+    const isToday = dayKey === calDayKey(today);
+    if (isToday) {
+      // Su oggi: shortcuts per aggiungere misurazioni
+      html += `<div class="day-section-title">aggiungi a oggi</div>
+        <div class="day-quick-grid">
+          <button class="day-quick" onclick="closeSheet(); setTimeout(()=>{goTo('misurazioni'); switchMeasTab('glicemia');}, 200);">
+            <span class="day-quick-ico">🩸</span><span>Glicemia</span>
+          </button>
+          <button class="day-quick" onclick="closeSheet(); setTimeout(()=>{goTo('misurazioni'); switchMeasTab('chetoni');}, 200);">
+            <span class="day-quick-ico">🧪</span><span>Chetoni</span>
+          </button>
+          <button class="day-quick" onclick="closeSheet(); setTimeout(()=>{goTo('misurazioni'); switchMeasTab('pressione');}, 200);">
+            <span class="day-quick-ico">💗</span><span>Pressione</span>
+          </button>
+          <button class="day-quick" onclick="closeSheet(); setTimeout(()=>{goTo('misurazioni'); switchMeasTab('peso');}, 200);">
+            <span class="day-quick-ico">⚖️</span><span>Peso</span>
+          </button>
+        </div>`;
+    }
+    html += `<button class="add-appt-btn" onclick="closeSheet(); setTimeout(() => openApptForm(null, '${dayKey}'), 250);">+ aggiungi appuntamento per ${dayKey === calDayKey(today) ? 'oggi' : 'questo giorno'}</button>`;
   }
 
   document.getElementById('sheetBody').innerHTML = html;

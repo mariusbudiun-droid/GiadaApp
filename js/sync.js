@@ -169,6 +169,7 @@ async function syncPushMeasurement(m) {
     subkind: m.subkind || null,
     ts: m.ts,
     value: m.value,
+    value2: m.value2 != null ? m.value2 : null,
     timing: m.timing || null,
     note: m.note || null,
     updated_at: new Date().toISOString()
@@ -240,6 +241,7 @@ async function syncPullAll() {
       kind: r.kind,
       subkind: r.subkind || undefined,
       value: r.value != null ? Number(r.value) : null,
+      value2: r.value2 != null ? Number(r.value2) : undefined,
       timing: r.timing || undefined,
       note: r.note || undefined
     }));

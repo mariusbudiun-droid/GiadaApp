@@ -21,6 +21,30 @@ function renderMisurazioni() {
   document.getElementById('lblCena').textContent = t+'h dal pasto';
   switchMeasTab('glicemia');
   closeGluc();
+  renderTuesdayHint();
+}
+
+function renderTuesdayHint() {
+  const existing = document.getElementById('tuesdayHint');
+  if (existing) existing.remove();
+  // martedì = 2 in JS getDay
+  const today = new Date();
+  if (today.getDay() !== 2) return;
+  const todayKey = todayStr();
+  const todayMeas = (DATA.measurements || []).filter(m => dateOf(m.ts) === todayKey);
+  const hasBp = todayMeas.some(m => m.kind === 'pressione');
+  const hasWeight = todayMeas.some(m => m.kind === 'peso');
+  if (hasBp && hasWeight) return;
+  const missing = [];
+  if (!hasBp) missing.push('pressione');
+  if (!hasWeight) missing.push('peso');
+  const tabs = document.querySelector('.meas-tabs');
+  if (!tabs) return;
+  const hint = document.createElement('div');
+  hint.id = 'tuesdayHint';
+  hint.className = 'tuesday-hint';
+  hint.innerHTML = `<span class="tuesday-hint-ico">📌</span> È martedì — se ti va, oggi puoi misurare <strong>${missing.join(' e ')}</strong>.`;
+  tabs.parentNode.insertBefore(hint, tabs);
 }
 
 function renderPartnerMisurazioni() {
@@ -41,12 +65,18 @@ function renderPartnerMisurazioni() {
     const skLabel = { digiuno:'a digiuno', colazione:'dopo colazione', pranzo:'dopo pranzo', cena:'dopo cena' };
     todayMeas.forEach(m => {
       const time = fmtTime(m.ts);
-      let label, valueHtml, unit;
+      let label, valueHtml;
       if (m.kind === 'glicemia') {
         const sk = skLabel[m.subkind] || 'glicemia';
         const tg = m.timing ? ` (${m.timing}h)` : '';
         label = sk + tg;
         valueHtml = `<span class="partner-meas-value">${m.value}</span><span class="partner-meas-unit">mg/dL</span>`;
+      } else if (m.kind === 'pressione') {
+        label = 'pressione';
+        valueHtml = `<span class="partner-meas-value">${m.value}/${m.value2}</span><span class="partner-meas-unit">mmHg</span>`;
+      } else if (m.kind === 'peso') {
+        label = 'peso';
+        valueHtml = `<span class="partner-meas-value">${m.value}</span><span class="partner-meas-unit">kg</span>`;
       } else {
         label = 'chetoni';
         valueHtml = `<span class="partner-meas-value" style="font-size:18px">${ketoLabel(m.value)}</span>`;
@@ -86,7 +116,11 @@ function switchMeasTab(w) {
   document.querySelectorAll('.meas-tab').forEach(b => b.classList.toggle('active', b.dataset.mtab === w));
   document.getElementById('measGlicemia').classList.toggle('hidden', w !== 'glicemia');
   document.getElementById('measChetoni').classList.toggle('hidden', w !== 'chetoni');
+  document.getElementById('measPressione').classList.toggle('hidden', w !== 'pressione');
+  document.getElementById('measPeso').classList.toggle('hidden', w !== 'peso');
   if (w === 'chetoni') resetKeto();
+  if (w === 'pressione') resetBp();
+  if (w === 'peso') resetWeight();
 }
 
 function openGluc(k) {
@@ -204,6 +238,155 @@ function saveKeto() {
   if (typeof syncPushMeasurement === 'function') syncPushMeasurement(rec);
   toast('Misurazione salvata');
   resetKeto();
+  goTo('home');
+}
+
+/* ---------- PRESSIONE ---------- */
+function resetBp() {
+  const s = document.getElementById('bpSys');
+  const d = document.getElementById('bpDia');
+  const n = document.getElementById('bpNoteText');
+  if (s) s.value = '';
+  if (d) d.value = '';
+  if (n) n.value = '';
+  const fb = document.getElementById('bpFeedback');
+  if (fb) fb.classList.remove('show');
+  const btn = document.getElementById('saveBpBtn');
+  if (btn) btn.disabled = true;
+  const note = document.getElementById('bpNote');
+  if (note) note.classList.remove('show');
+  // listener input
+  if (s && !s._bpAttached) {
+    s.addEventListener('input', showBpFeedback);
+    s._bpAttached = true;
+  }
+  if (d && !d._bpAttached) {
+    d.addEventListener('input', showBpFeedback);
+    d._bpAttached = true;
+  }
+}
+
+function showBpFeedback() {
+  const sys = parseInt(document.getElementById('bpSys').value);
+  const dia = parseInt(document.getElementById('bpDia').value);
+  const btn = document.getElementById('saveBpBtn');
+  const fb = document.getElementById('bpFeedback');
+  const icon = document.getElementById('bpFbIcon');
+  const text = document.getElementById('bpFbText');
+  if (isNaN(sys) || isNaN(dia)) {
+    btn.disabled = true;
+    fb.classList.remove('show');
+    return;
+  }
+  btn.disabled = false;
+  const cat = bpCategory(sys, dia);
+  fb.className = 'feedback show ' + cat.tone;
+  icon.textContent = cat.icon;
+  text.textContent = cat.text;
+}
+
+function bpCategory(sys, dia) {
+  if (sys >= 160 || dia >= 110) {
+    return { tone:'alert', icon:'⚠️', text:'Valore importante. Risenti tra 10–15 minuti a riposo; se rimane così chiama la dottoressa o il pronto soccorso ostetrico.' };
+  }
+  if (sys >= 140 || dia >= 90) {
+    return { tone:'warn', icon:'•', text:'Più alta del solito. Risenti tra mezz\'ora a riposo, e parlane in visita.' };
+  }
+  if (sys >= 135 || dia >= 85) {
+    return { tone:'warn', icon:'•', text:'Leggermente più del solito. Segnala alla dottoressa al prossimo controllo.' };
+  }
+  if (sys < 90 || dia < 60) {
+    return { tone:'info', icon:'•', text:'Un po\' bassa. Se ti senti stanca, riposa un attimo e bevi qualcosa.' };
+  }
+  return { tone:'ok', icon:'✓', text:'Tutto bene, valore nella norma.' };
+}
+
+function saveBp() {
+  const sys = parseInt(document.getElementById('bpSys').value);
+  const dia = parseInt(document.getElementById('bpDia').value);
+  if (isNaN(sys) || isNaN(dia)) return;
+  const rec = {
+    id: uid(), ts: Date.now(),
+    kind: 'pressione',
+    value: sys, value2: dia,
+    note: document.getElementById('bpNoteText').value.trim()
+  };
+  DATA.measurements.push(rec);
+  saveData();
+  if (typeof syncPushMeasurement === 'function') syncPushMeasurement(rec);
+  toast('Pressione salvata');
+  resetBp();
+  goTo('home');
+}
+
+/* ---------- PESO ---------- */
+function resetWeight() {
+  const v = document.getElementById('wValue');
+  const n = document.getElementById('wNoteText');
+  if (v) v.value = '';
+  if (n) n.value = '';
+  const btn = document.getElementById('saveWBtn');
+  if (btn) btn.disabled = true;
+  const note = document.getElementById('wNote');
+  if (note) note.classList.remove('show');
+  const delta = document.getElementById('weightDelta');
+  if (delta) delta.innerHTML = '';
+  if (v && !v._wAttached) {
+    v.addEventListener('input', showWeightFeedback);
+    v._wAttached = true;
+  }
+}
+
+function showWeightFeedback() {
+  const val = parseFloat(document.getElementById('wValue').value);
+  const btn = document.getElementById('saveWBtn');
+  const delta = document.getElementById('weightDelta');
+  if (isNaN(val) || val <= 0) {
+    btn.disabled = true;
+    delta.innerHTML = '';
+    return;
+  }
+  btn.disabled = false;
+  // Calcolo delta dall'ultima pesata e dal primo peso (se DPP imposta)
+  const weights = (DATA.measurements || [])
+    .filter(m => m.kind === 'peso')
+    .sort((a,b) => a.ts - b.ts);
+  let html = '';
+  if (weights.length > 0) {
+    const last = weights[weights.length - 1];
+    const diff = val - last.value;
+    const sign = diff >= 0 ? '+' : '';
+    const dl = new Date(last.ts);
+    const daysAgo = Math.round((Date.now() - last.ts) / 86400000);
+    const when = daysAgo === 0 ? 'oggi' : (daysAgo === 1 ? 'ieri' : `${daysAgo} giorni fa`);
+    html += `<div class="weight-delta-row"><span class="weight-delta-num ${diff>=0?'pos':'neg'}">${sign}${diff.toFixed(1)} kg</span> <span class="weight-delta-when">dall'ultima volta (${when})</span></div>`;
+  }
+  // Totale da inizio gravidanza
+  if (weights.length > 0) {
+    const first = weights[0];
+    const totalDiff = val - first.value;
+    const sign = totalDiff >= 0 ? '+' : '';
+    html += `<div class="weight-delta-row"><span class="weight-delta-num ${totalDiff>=0?'pos':'neg'}">${sign}${totalDiff.toFixed(1)} kg</span> <span class="weight-delta-when">dalla prima pesata</span></div>`;
+  } else {
+    html += `<div class="weight-delta-row muted">Questa è la prima pesata salvata.</div>`;
+  }
+  delta.innerHTML = html;
+}
+
+function saveWeight() {
+  const val = parseFloat(document.getElementById('wValue').value);
+  if (isNaN(val) || val <= 0) return;
+  const rec = {
+    id: uid(), ts: Date.now(),
+    kind: 'peso',
+    value: val,
+    note: document.getElementById('wNoteText').value.trim()
+  };
+  DATA.measurements.push(rec);
+  saveData();
+  if (typeof syncPushMeasurement === 'function') syncPushMeasurement(rec);
+  toast('Peso salvato');
+  resetWeight();
   goTo('home');
 }
 
@@ -559,6 +742,14 @@ function exportDiarioTxt() {
         txt += '\n';
       } else if (e.type === 'meas' && e.kind === 'chetoni') {
         txt += `${t}  Chetoni: ${ketoLabel(e.value)}`;
+        if (e.note) txt += `  · nota: ${e.note}`;
+        txt += '\n';
+      } else if (e.type === 'meas' && e.kind === 'pressione') {
+        txt += `${t}  Pressione: ${e.value}/${e.value2} mmHg`;
+        if (e.note) txt += `  · nota: ${e.note}`;
+        txt += '\n';
+      } else if (e.type === 'meas' && e.kind === 'peso') {
+        txt += `${t}  Peso: ${e.value} kg`;
         if (e.note) txt += `  · nota: ${e.note}`;
         txt += '\n';
       } else {
