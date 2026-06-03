@@ -142,6 +142,8 @@
         <div class="meas-tabs">
           <button class="meas-tab active" data-mtab="glicemia" onclick="switchMeasTab('glicemia')">Glicemia</button>
           <button class="meas-tab" data-mtab="chetoni" onclick="switchMeasTab('chetoni')">Chetoni</button>
+          <button class="meas-tab" data-mtab="pressione" onclick="switchMeasTab('pressione')">Pressione</button>
+          <button class="meas-tab" data-mtab="peso" onclick="switchMeasTab('peso')">Peso</button>
         </div>
 
         <!-- GLICEMIA -->
@@ -218,6 +220,54 @@
             </div>
 
             <button class="save-btn" id="saveKetoBtn" onclick="saveKeto()" disabled>Salva misurazione</button>
+          </div>
+        </div>
+
+        <!-- PRESSIONE -->
+        <div id="measPressione" class="hidden">
+          <div class="input-card">
+            <div class="input-meta">misuratore al braccio, a riposo da almeno 5 minuti</div>
+            <div class="bp-row">
+              <div class="bp-field">
+                <input type="number" inputmode="numeric" id="bpSys" placeholder="—" min="60" max="220">
+                <span class="bp-label">massima</span>
+              </div>
+              <span class="bp-sep">/</span>
+              <div class="bp-field">
+                <input type="number" inputmode="numeric" id="bpDia" placeholder="—" min="40" max="140">
+                <span class="bp-label">minima</span>
+              </div>
+              <span class="bp-unit">mmHg</span>
+            </div>
+            <div class="feedback" id="bpFeedback">
+              <span class="feedback-icon" id="bpFbIcon"></span>
+              <span id="bpFbText"></span>
+            </div>
+            <button class="note-toggle" onclick="toggleNote('bpNote')">+ aggiungi una nota</button>
+            <div class="note-area" id="bpNote">
+              <textarea id="bpNoteText" placeholder="(facoltativo) es: dopo la passeggiata, oppure giornata storta…"></textarea>
+            </div>
+            <button class="save-btn" id="saveBpBtn" onclick="saveBp()" disabled>Salva misurazione</button>
+          </div>
+        </div>
+
+        <!-- PESO -->
+        <div id="measPeso" class="hidden">
+          <div class="input-card">
+            <div class="input-meta">a digiuno, appena alzata se possibile</div>
+            <div class="bp-row">
+              <div class="bp-field">
+                <input type="number" inputmode="decimal" id="wValue" placeholder="—" min="30" max="200" step="0.1">
+                <span class="bp-label">peso</span>
+              </div>
+              <span class="bp-unit">kg</span>
+            </div>
+            <div id="weightDelta" class="weight-delta"></div>
+            <button class="note-toggle" onclick="toggleNote('wNote')">+ aggiungi una nota</button>
+            <div class="note-area" id="wNote">
+              <textarea id="wNoteText" placeholder="(facoltativo) es: gambe gonfie, oppure giornata di scarpe pesanti…"></textarea>
+            </div>
+            <button class="save-btn" id="saveWBtn" onclick="saveWeight()" disabled>Salva misurazione</button>
           </div>
         </div>
 
