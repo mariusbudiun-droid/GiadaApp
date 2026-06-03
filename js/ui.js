@@ -272,7 +272,8 @@ function confirmDelMeas(id) {
     DATA.measurements = DATA.measurements.filter(m => m.id !== id);
     saveData();
     if (typeof syncDeleteMeasurement === 'function') syncDeleteMeasurement(id);
-    renderDiario(); toast('Cancellata');
+    if (typeof renderCalendario === 'function') renderCalendario();
+    toast('Cancellata');
   });
 }
 function confirmDelMeal(id) {
@@ -280,7 +281,8 @@ function confirmDelMeal(id) {
     DATA.meals = DATA.meals.filter(m => m.id !== id);
     saveData();
     if (typeof syncDeleteMeal === 'function') syncDeleteMeal(id);
-    renderDiario(); toast('Pasto cancellato');
+    if (typeof renderCalendario === 'function') renderCalendario();
+    toast('Pasto cancellato');
   });
 }
 
@@ -369,6 +371,8 @@ function renderSettings() {
     </div>
     <div class="muted" style="font-size:12px;margin:0 4px 18px;">"Auto" segue le impostazioni del telefono.</div>
 
+    ${renderDppRow()}
+
     <div class="card-eyebrow" style="margin:14px 4px 8px">dati</div>
     <button class="set-row" onclick="exportBackup()"><div><div class="set-row-label">Esporta backup</div><div class="set-row-sub">Salva un file con tutti i tuoi dati</div></div><span style="color:var(--text-light)">›</span></button>
     <label class="set-row" for="importFile" style="cursor:pointer;"><div><div class="set-row-label">Importa backup</div><div class="set-row-sub">Ripristina da un file salvato</div></div><span style="color:var(--text-light)">›</span><input type="file" id="importFile" accept=".json,application/json" style="display:none" onchange="importBackup(event)"></label>
@@ -377,6 +381,27 @@ function renderSettings() {
 
     <div class="muted center" style="margin-top:20px;font-size:12px;">Giada v${APP_VERSION}</div>
   `;
+}
+
+function renderDppRow() {
+  if (typeof SYNC === 'undefined' || !SYNC.role) return '';
+  if (SYNC.role !== 'owner') return '';
+  const dpp = SYNC.profile?.due_date;
+  let txt = 'Imposta data presunta del parto';
+  let sub = 'per il counter di gravidanza';
+  if (dpp) {
+    const parts = dpp.split('-');
+    const d = new Date(parseInt(parts[0]), parseInt(parts[1])-1, parseInt(parts[2]));
+    const M = ['gen','feb','mar','apr','mag','giu','lug','ago','set','ott','nov','dic'];
+    txt = 'Data presunta del parto';
+    sub = `${d.getDate()} ${M[d.getMonth()]} ${d.getFullYear()}`;
+  }
+  return `
+    <div class="card-eyebrow" style="margin:14px 4px 8px">gravidanza</div>
+    <button class="set-row" onclick="openDppPicker()">
+      <div><div class="set-row-label">${txt}</div><div class="set-row-sub">${sub}</div></div>
+      <span style="color:var(--text-light)">›</span>
+    </button>`;
 }
 
 function renderShareSection() {

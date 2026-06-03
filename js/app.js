@@ -4,13 +4,13 @@
    ========================================================= */
 'use strict';
 
-const APP_VERSION = '1.5.0';
+const APP_VERSION = '1.6.0';
 console.log('%c GIADA · v' + APP_VERSION + ' ', 'background:#7A9978;color:white;padding:4px 8px;border-radius:4px;font-weight:bold;');
 
 /* ---------- STORAGE ---------- */
 const STORAGE_KEY = 'giada_data_v1';
 const THEME_KEY = 'giada_theme_v1';
-let DATA = { measurements: [], meals: [], prefs: {} };
+let DATA = { measurements: [], meals: [], appointments: [], prefs: {} };
 
 function loadData() {
   try {
@@ -20,6 +20,7 @@ function loadData() {
       DATA = Object.assign(DATA, p);
       if (!DATA.measurements) DATA.measurements = [];
       if (!DATA.meals) DATA.meals = [];
+      if (!DATA.appointments) DATA.appointments = [];
       if (!DATA.prefs) DATA.prefs = {};
     }
   } catch(e) {}
@@ -110,7 +111,7 @@ function goTo(tab) {
   if (tab === 'home') renderHome();
   if (tab === 'pasti') renderPasti();
   if (tab === 'misurazioni') renderMisurazioni();
-  if (tab === 'diario') renderDiario();
+  if (tab === 'calendario') renderCalendario();
   if (tab === 'stats') renderStats();
   if (tab === 'set') renderSettings();
 }

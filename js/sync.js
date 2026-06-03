@@ -201,6 +201,9 @@ async function syncBackfillAll() {
   for (const x of (DATA.measurements || [])) {
     await syncPushMeasurement(x);
   }
+  for (const a of (DATA.appointments || [])) {
+    await syncPushAppt(a);
+  }
 }
 
 /* ---------- PULL (solo partner): tira giù tutti i dati dell'owner ---------- */
@@ -220,6 +223,7 @@ async function syncPullAll() {
     const ownerId = SYNC.ownerProfile.id;
     const meals = await supaReq('meals?owner_id=eq.' + ownerId + '&select=*&order=ts.desc');
     const measurements = await supaReq('measurements?owner_id=eq.' + ownerId + '&select=*&order=ts.desc');
+    const appointments = await supaReq('appointments?owner_id=eq.' + ownerId + '&select=*&order=date.desc');
 
     // Trasformo nel formato locale
     DATA.meals = (meals || []).map(r => ({
@@ -239,16 +243,24 @@ async function syncPullAll() {
       timing: r.timing || undefined,
       note: r.note || undefined
     }));
+    DATA.appointments = (appointments || []).map(r => ({
+      id: r.local_id,
+      title: r.title,
+      date: r.date,
+      location: r.location || undefined,
+      note: r.note || undefined
+    }));
     saveData();
     SYNC.lastPull = Date.now();
     saveSync();
 
-    // Refresh note
+    // Refresh note + DPP
     await syncPullNotes();
+    await syncPullDueDateForPartner();
 
     // Refresh UI
     try { if (typeof renderHome === 'function') renderHome(); } catch(_){}
-    try { if (typeof renderDiary === 'function') renderDiary(); } catch(_){}
+    try { if (typeof renderCalendario === 'function') renderCalendario(); } catch(_){}
     try { if (typeof renderStats === 'function') renderStats(); } catch(_){}
   } catch(e) {
     console.warn('pull failed', e);
@@ -267,6 +279,72 @@ function startPartnerSync() {
   document.addEventListener('visibilitychange', () => {
     if (!document.hidden) syncPullAll();
   });
+}
+
+/* ---------- DPP (data presunta parto) ---------- */
+async function syncSetDueDate(date) {
+  if (SYNC.role !== 'owner' || !SYNC.profile) return;
+  try {
+    await supaReq('profiles?id=eq.' + SYNC.profile.id, {
+      method: 'PATCH',
+      body: { due_date: date },
+      prefer: 'return=minimal'
+    });
+    SYNC.profile.due_date = date;
+    saveSync();
+  } catch(e) { console.warn('set dpp failed', e); throw e; }
+}
+
+async function syncPullDueDateForPartner() {
+  if (SYNC.role !== 'partner' || !SYNC.ownerProfile) return;
+  try {
+    const r = await supaReq('profiles?id=eq.' + SYNC.ownerProfile.id + '&select=due_date');
+    if (r && r.length) {
+      SYNC.ownerProfile.due_date = r[0].due_date;
+      // espongo come SYNC.profile.due_date sì che pregnancyStatus legga dallo stesso posto
+      if (!SYNC.profile) SYNC.profile = {};
+      SYNC.profile.due_date = r[0].due_date;
+      saveSync();
+    }
+  } catch(e) { console.warn('pull dpp failed', e); }
+}
+
+/* ---------- APPUNTAMENTI ---------- */
+async function syncPushAppt(a) {
+  if (SYNC.role !== 'owner' || !SYNC.profile || SYNC.paused) return;
+  const body = {
+    owner_id: SYNC.profile.id,
+    local_id: a.id,
+    title: a.title,
+    date: a.date,
+    location: a.location || null,
+    note: a.note || null,
+    updated_at: new Date().toISOString()
+  };
+  try {
+    await supaReq('appointments?on_conflict=owner_id,local_id', {
+      method: 'POST',
+      body,
+      prefer: 'resolution=merge-duplicates,return=minimal'
+    });
+  } catch(e) { console.warn('push appt failed', e); }
+}
+
+async function syncDeleteAppt(localId) {
+  if (SYNC.role !== 'owner' || !SYNC.profile || SYNC.paused) return;
+  try {
+    await supaReq('appointments?owner_id=eq.' + SYNC.profile.id + '&local_id=eq.' + encodeURIComponent(localId), {
+      method: 'DELETE',
+      prefer: 'return=minimal'
+    });
+  } catch(e) { console.warn('delete appt failed', e); }
+}
+
+async function syncBackfillAppointments() {
+  if (SYNC.role !== 'owner' || !SYNC.profile) return;
+  for (const a of (DATA.appointments || [])) {
+    await syncPushAppt(a);
+  }
 }
 
 /* ---------- NOTE: lavagnetta condivisa ---------- */

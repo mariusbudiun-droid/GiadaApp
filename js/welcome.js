@@ -77,8 +77,8 @@ async function completeOwnerSetup() {
     await syncRegisterOwner(name);
     // Spingo eventuali dati già presenti
     await syncBackfillAll();
-    hideWelcome();
-    if (typeof onSyncReady === 'function') onSyncReady();
+    // Passo allo step DPP
+    renderOwnerSetupDpp();
   } catch(e) {
     el.innerHTML = `
       <div class="welcome-card">
@@ -87,6 +87,47 @@ async function completeOwnerSetup() {
         <button class="welcome-primary" onclick="renderOwnerSetup()"><div class="welcome-btn-title">Riprova</div></button>
       </div>`;
   }
+}
+
+function renderOwnerSetupDpp() {
+  const el = document.getElementById('welcomeOverlay');
+  // Default suggerito: oggi + 200 giorni
+  const def = new Date(); def.setDate(def.getDate() + 200);
+  const defStr = def.toISOString().slice(0,10);
+  el.innerHTML = `
+    <div class="welcome-card">
+      <div class="welcome-eyebrow">quasi fatto</div>
+      <h2 class="welcome-h2">Quando è la data presunta del parto?</h2>
+      <p class="welcome-body small">
+        Ci serve solo per calcolare le settimane di gravidanza.
+        Puoi sempre cambiarla più tardi dalle Impostazioni.
+      </p>
+      <input type="date" id="setupDpp" class="welcome-input" value="${defStr}">
+      <button class="welcome-primary" onclick="completeDppSetup()">
+        <div class="welcome-btn-title">Inizia</div>
+      </button>
+      <button class="welcome-secondary" onclick="skipDppSetup()" style="margin-top:8px;">
+        <div class="welcome-btn-title">La metto dopo</div>
+        <div class="welcome-btn-sub">posso aggiungerla quando voglio</div>
+      </button>
+    </div>`;
+}
+
+async function completeDppSetup() {
+  const d = document.getElementById('setupDpp')?.value;
+  if (!d) { skipDppSetup(); return; }
+  const el = document.getElementById('welcomeOverlay');
+  el.innerHTML = `<div class="welcome-card"><div class="welcome-spinner"></div><p class="welcome-body center">Salvataggio…</p></div>`;
+  try {
+    await syncSetDueDate(d);
+  } catch(e) { /* ignoro errore, va avanti */ }
+  hideWelcome();
+  if (typeof onSyncReady === 'function') onSyncReady();
+}
+
+function skipDppSetup() {
+  hideWelcome();
+  if (typeof onSyncReady === 'function') onSyncReady();
 }
 
 function renderPartnerSetup() {
