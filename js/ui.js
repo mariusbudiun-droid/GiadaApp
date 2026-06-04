@@ -559,7 +559,7 @@ function renderSettings() {
     <div class="card-eyebrow" style="margin:14px 4px 8px">dati</div>
     <button class="set-row" onclick="exportBackup()"><div><div class="set-row-label">Esporta backup</div><div class="set-row-sub">Salva un file con tutti i tuoi dati</div></div><span style="color:var(--text-light)">›</span></button>
     <label class="set-row" for="importFile" style="cursor:pointer;"><div><div class="set-row-label">Importa backup</div><div class="set-row-sub">Ripristina da un file salvato</div></div><span style="color:var(--text-light)">›</span><input type="file" id="importFile" accept=".json,application/json" style="display:none" onchange="importBackup(event)"></label>
-    <button class="set-row" onclick="exportDiarioTxt()"><div><div class="set-row-label">Esporta diario per la dottoressa</div><div class="set-row-sub">File leggibile da stampare</div></div><span style="color:var(--text-light)">›</span></button>
+    <button class="set-row" onclick="exportDiarioPdf()"><div><div class="set-row-label">Esporta diario per la dottoressa</div><div class="set-row-sub">PDF da stampare (formato USL)</div></div><span style="color:var(--text-light)">›</span></button>
     <button class="set-row" onclick="confirmReset()"><div><div class="set-row-label" style="color:var(--alert-text)">Cancella tutti i dati</div><div class="set-row-sub">Non si può annullare</div></div><span style="color:var(--alert-text)">›</span></button>
 
     <div class="muted center" style="margin-top:20px;font-size:12px;">Giada v${APP_VERSION}</div>
