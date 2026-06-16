@@ -1,7 +1,7 @@
 /* Giada - Service Worker
    Per forzare aggiornamento: incrementa CACHE_VERSION */
 'use strict';
-const CACHE_VERSION = 'giada-v1.8.1';
+const CACHE_VERSION = 'giada-v1.8.2';
 const ASSETS = [
   './',
   './index.html',
@@ -27,6 +27,8 @@ const ASSETS = [
 ];
 
 self.addEventListener('install', (e) => {
+  // AUTO-UPDATE: il nuovo SW si attiva subito, senza aspettare il prossimo lancio
+  self.skipWaiting();
   e.waitUntil(
     caches.open(CACHE_VERSION).then(c => c.addAll(ASSETS))
   );
