@@ -837,36 +837,44 @@ function init() {
   if (window.matchMedia) {
     window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => updateThemeMeta(CURRENT_THEME));
   }
-  // Service worker
+  // Service worker — auto-update silenzioso
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
       navigator.serviceWorker.register('./sw.js').then(reg => {
+        // Quando arriva un nuovo SW, lo attivo subito senza chiedere niente
         reg.addEventListener('updatefound', () => {
           const nw = reg.installing;
+          if (!nw) return;
           nw.addEventListener('statechange', () => {
             if (nw.state === 'installed' && navigator.serviceWorker.controller) {
-              showUpdateBanner();
+              // Forza lo skip-waiting (anche se il SW già lo fa da solo nel suo install)
+              try { nw.postMessage({ type: 'SKIP_WAITING' }); } catch(_) {}
             }
           });
         });
+        // Check periodico per nuovi update mentre l'app è aperta
+        // ogni 10 minuti, e ogni volta che l'app torna in foreground
+        setInterval(() => { reg.update().catch(()=>{}); }, 10 * 60 * 1000);
+        document.addEventListener('visibilitychange', () => {
+          if (!document.hidden) reg.update().catch(()=>{});
+        });
       }).catch(err => console.warn('SW error', err));
     });
+    // Quando il SW cambia controller, ricarico la pagina (silenzioso)
+    let reloading = false;
     navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (reloading) return;
+      reloading = true;
       window.location.reload();
     });
   }
 }
 
 function showUpdateBanner() {
-  const b = document.getElementById('updateBanner');
-  if (b) b.classList.add('show');
+  // Kept come no-op: l'aggiornamento è automatico, niente banner
 }
 function applyUpdate() {
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.getRegistration().then(reg => {
-      if (reg && reg.waiting) reg.waiting.postMessage({ type: 'SKIP_WAITING' });
-    });
-  }
+  // Kept come no-op: l'aggiornamento è automatico
 }
 
 function onSyncReady() {
