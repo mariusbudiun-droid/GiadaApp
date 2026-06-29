@@ -259,6 +259,7 @@ function openDayView(dayKey) {
   const meas = DATA.measurements.filter(x => dateOf(x.ts) === dayKey).sort((a,b) => a.ts - b.ts);
   const appts = (DATA.appointments || []).filter(a => calDayKey(new Date(a.date)) === dayKey).sort((a,b) => new Date(a.date) - new Date(b.date));
 
+  const isEmpty = appts.length === 0 && meals.length === 0 && meas.length === 0;
   let html = '';
 
   // APPUNTAMENTI
@@ -282,6 +283,9 @@ function openDayView(dayKey) {
         }).filter(Boolean).join(' · ');
       }
       const noteHtml = m.note ? `<div class="day-meal-note">"${escapeHtml(m.note)}"</div>` : '';
+      const editBtn = !isPartner
+        ? `<button class="day-card-edit" onclick="openMealEditFromCalendar('${m.id}','${dayKey}')">modifica</button>`
+        : '';
       html += `<div class="day-meal-card">
         <div class="day-meal-head">
           <span class="day-meal-name">${slot ? slot.name : 'pasto'}</span>
@@ -289,6 +293,7 @@ function openDayView(dayKey) {
         </div>
         ${itemsText ? `<div class="day-meal-items">${escapeHtml(itemsText)}</div>` : ''}
         ${noteHtml}
+        ${editBtn}
       </div>`;
     });
   }
@@ -316,6 +321,9 @@ function openDayView(dayKey) {
         valTxt = ketoLabel(m.value);
       }
       const noteHtml = m.note ? `<div class="day-meas-note">"${escapeHtml(m.note)}"</div>` : '';
+      const editBtn = !isPartner
+        ? `<button class="day-card-edit" onclick="openMeasForm('${m.id}','${dayKey}')">modifica</button>`
+        : '';
       html += `<div class="day-meas-card">
         <div class="day-meas-head">
           <div>
@@ -325,42 +333,618 @@ function openDayView(dayKey) {
           <div class="day-meas-val">${valTxt}</div>
         </div>
         ${noteHtml}
+        ${editBtn}
       </div>`;
     });
   }
 
-  // EMPTY
-  if (appts.length === 0 && meals.length === 0 && meas.length === 0) {
+  if (isEmpty) {
     html += `<div class="day-empty">Nessuna registrazione per questo giorno.</div>`;
   }
 
-  // AZIONE per future: aggiungi appuntamento
-  if (!isPartner && !isPast) {
-    const isToday = dayKey === calDayKey(today);
-    if (isToday) {
-      // Su oggi: shortcuts per aggiungere misurazioni
-      html += `<div class="day-section-title">aggiungi a oggi</div>
+  // BOTTONI AGGIUNGI (solo se non partner)
+  if (!isPartner) {
+    if (isEmpty) {
+      // Giorno vuoto: 4 scorciatoie misurazioni + pasto + appuntamento
+      html += `<div class="day-section-title">aggiungi a questo giorno</div>
         <div class="day-quick-grid">
-          <button class="day-quick" onclick="closeSheet(); setTimeout(()=>{goTo('misurazioni'); switchMeasTab('glicemia');}, 200);">
+          <button class="day-quick" onclick="openMeasForm(null,'${dayKey}','glicemia')">
             <span class="day-quick-ico">🩸</span><span>Glicemia</span>
           </button>
-          <button class="day-quick" onclick="closeSheet(); setTimeout(()=>{goTo('misurazioni'); switchMeasTab('chetoni');}, 200);">
+          <button class="day-quick" onclick="openMeasForm(null,'${dayKey}','chetoni')">
             <span class="day-quick-ico">🧪</span><span>Chetoni</span>
           </button>
-          <button class="day-quick" onclick="closeSheet(); setTimeout(()=>{goTo('misurazioni'); switchMeasTab('pressione');}, 200);">
+          <button class="day-quick" onclick="openMeasForm(null,'${dayKey}','pressione')">
             <span class="day-quick-ico">💗</span><span>Pressione</span>
           </button>
-          <button class="day-quick" onclick="closeSheet(); setTimeout(()=>{goTo('misurazioni'); switchMeasTab('peso');}, 200);">
+          <button class="day-quick" onclick="openMeasForm(null,'${dayKey}','peso')">
             <span class="day-quick-ico">⚖️</span><span>Peso</span>
           </button>
+          <button class="day-quick" onclick="openMealEditFromCalendar(null,'${dayKey}')">
+            <span class="day-quick-ico">🍽️</span><span>Pasto</span>
+          </button>
+          <button class="day-quick" onclick="closeSheet(); setTimeout(() => openApptForm(null,'${dayKey}'),250);">
+            <span class="day-quick-ico">📅</span><span>Appuntamento</span>
+          </button>
         </div>`;
+    } else {
+      // Giorno con dati: due bottoni + appuntamento
+      html += `<div class="day-add-row">
+        <button class="day-add-mini" onclick="openMeasMenu('${dayKey}')">+ misurazione</button>
+        <button class="day-add-mini" onclick="openMealEditFromCalendar(null,'${dayKey}')">+ pasto</button>
+      </div>
+      <button class="add-appt-btn" onclick="closeSheet(); setTimeout(() => openApptForm(null,'${dayKey}'),250);">+ aggiungi appuntamento</button>`;
     }
-    html += `<button class="add-appt-btn" onclick="closeSheet(); setTimeout(() => openApptForm(null, '${dayKey}'), 250);">+ aggiungi appuntamento per ${dayKey === calDayKey(today) ? 'oggi' : 'questo giorno'}</button>`;
   }
 
   document.getElementById('sheetBody').innerHTML = html;
   document.getElementById('sheetOverlay').classList.add('open');
   document.getElementById('sheet').classList.add('open');
+}
+
+/* ---------- MENU "scegli tipo misurazione" (quando il giorno ha già dati) ---------- */
+function openMeasMenu(dayKey) {
+  const html = `
+    <div class="day-section-title">Che tipo di misurazione?</div>
+    <div class="day-quick-grid">
+      <button class="day-quick" onclick="openMeasForm(null,'${dayKey}','glicemia')">
+        <span class="day-quick-ico">🩸</span><span>Glicemia</span>
+      </button>
+      <button class="day-quick" onclick="openMeasForm(null,'${dayKey}','chetoni')">
+        <span class="day-quick-ico">🧪</span><span>Chetoni</span>
+      </button>
+      <button class="day-quick" onclick="openMeasForm(null,'${dayKey}','pressione')">
+        <span class="day-quick-ico">💗</span><span>Pressione</span>
+      </button>
+      <button class="day-quick" onclick="openMeasForm(null,'${dayKey}','peso')">
+        <span class="day-quick-ico">⚖️</span><span>Peso</span>
+      </button>
+    </div>
+    <button class="day-add-mini" style="width:100%;margin-top:8px" onclick="openDayView('${dayKey}')">‹ indietro</button>`;
+  document.getElementById('sheetTitle').textContent = 'Aggiungi misurazione';
+  document.getElementById('sheetSub').textContent = formatDateLong(dayKey);
+  document.getElementById('sheetBody').innerHTML = html;
+}
+
+function formatDateLong(dayKey) {
+  const parts = dayKey.split('-');
+  const d = new Date(parseInt(parts[0]), parseInt(parts[1])-1, parseInt(parts[2]));
+  const D = ['domenica','lunedì','martedì','mercoledì','giovedì','venerdì','sabato'];
+  const M = ['gennaio','febbraio','marzo','aprile','maggio','giugno','luglio','agosto','settembre','ottobre','novembre','dicembre'];
+  return `${D[d.getDay()]} ${d.getDate()} ${M[d.getMonth()]}`;
+}
+
+/* ---------- FORM MISURAZIONE (nuovo o edit, contestualizzato a un giorno) ---------- */
+function openMeasForm(measId, dayKey, kindIfNew) {
+  // measId === null → nuovo, useremo kindIfNew
+  // measId valido → edit, recupero kind da DATA
+  let m = null;
+  let kind = kindIfNew;
+  if (measId) {
+    m = (DATA.measurements || []).find(x => x.id === measId);
+    if (m) kind = m.kind;
+  }
+  if (!kind) return;
+
+  const isNew = !m;
+  const title = isNew ? `Aggiungi ${kind}` : `Modifica ${kind}`;
+  document.getElementById('sheetTitle').textContent = title;
+  document.getElementById('sheetSub').textContent = formatDateLong(dayKey);
+
+  // Costruisco form in base al kind
+  let body = '';
+  if (kind === 'glicemia') {
+    body = renderGlucForm(m, dayKey);
+  } else if (kind === 'chetoni') {
+    body = renderKetoForm(m, dayKey);
+  } else if (kind === 'pressione') {
+    body = renderBpForm(m, dayKey);
+  } else if (kind === 'peso') {
+    body = renderWeightForm(m, dayKey);
+  }
+
+  document.getElementById('sheetBody').innerHTML = body;
+  document.getElementById('sheetOverlay').classList.add('open');
+  document.getElementById('sheet').classList.add('open');
+
+  // Salvo stato per il salvataggio
+  window._editingMeas = { id: measId, dayKey, kind, isNew };
+}
+
+function renderGlucForm(m, dayKey) {
+  const subkinds = [
+    { id: 'digiuno', label: 'A digiuno', defH: 8 },
+    { id: 'colazione', label: 'Dopo colazione', defH: 9 },
+    { id: 'pranzo', label: 'Dopo pranzo', defH: 14 },
+    { id: 'cena', label: 'Dopo cena', defH: 21 }
+  ];
+  const curSub = m ? m.subkind : 'digiuno';
+  const curTiming = m ? (m.timing || 1) : 1;
+  const curVal = m ? m.value : '';
+  const curNote = m ? (m.note || '') : '';
+  const curTime = m ? fmtTime(m.ts) : '08:00';
+
+  let subkindRadios = subkinds.map(s =>
+    `<label class="form-radio${s.id === curSub ? ' active' : ''}">
+       <input type="radio" name="glucSub" value="${s.id}" ${s.id === curSub ? 'checked' : ''} onchange="updateGlucDefaultTime()">
+       ${s.label}
+     </label>`).join('');
+
+  return `
+    <div class="meas-form">
+      <label class="form-label">Quando</label>
+      <div class="form-radio-grid">${subkindRadios}</div>
+
+      <div class="form-row" id="glucTimingRow">
+        <div>
+          <label class="form-label">Timing</label>
+          <div class="form-radio-row">
+            <label class="form-radio-pill${curTiming === 1 ? ' active' : ''}">
+              <input type="radio" name="glucTiming" value="1" ${curTiming === 1 ? 'checked' : ''}>1h
+            </label>
+            <label class="form-radio-pill${curTiming === 2 ? ' active' : ''}">
+              <input type="radio" name="glucTiming" value="2" ${curTiming === 2 ? 'checked' : ''}>2h
+            </label>
+          </div>
+        </div>
+        <div>
+          <label class="form-label">Ora</label>
+          <input type="time" id="glucTime" class="appt-input" value="${curTime}">
+        </div>
+      </div>
+
+      <label class="form-label">Valore (mg/dL)</label>
+      <input type="number" id="glucValueEdit" class="appt-input" inputmode="numeric" min="20" max="600" value="${curVal}">
+
+      <label class="form-label">Nota (opzionale)</label>
+      <textarea id="glucNoteEdit" class="appt-input" rows="2" maxlength="500">${escapeHtml(curNote)}</textarea>
+
+      <div class="meas-form-actions">
+        ${m ? `<button class="appt-form-del" onclick="deleteMeasFromForm()">Elimina</button>` : ''}
+        <button class="appt-form-save" onclick="saveMeasFromForm()">Salva</button>
+      </div>
+    </div>`;
+}
+
+function updateGlucDefaultTime() {
+  // se è nuovo, aggiorna l'ora di default in base al subkind scelto
+  if (!window._editingMeas || !window._editingMeas.isNew) return;
+  const sel = document.querySelector('input[name="glucSub"]:checked');
+  if (!sel) return;
+  const map = { digiuno: '08:00', colazione: '09:00', pranzo: '14:00', cena: '21:00' };
+  const t = document.getElementById('glucTime');
+  if (t) t.value = map[sel.value] || t.value;
+  // anche pill timing: digiuno non ha timing, gli altri default 1h
+  const row = document.getElementById('glucTimingRow');
+  if (sel.value === 'digiuno') {
+    row.querySelectorAll('.form-radio-pill').forEach(p => p.style.display = 'none');
+  } else {
+    row.querySelectorAll('.form-radio-pill').forEach(p => p.style.display = '');
+  }
+  // aggiorno style active radio
+  document.querySelectorAll('.form-radio').forEach(r => r.classList.remove('active'));
+  sel.parentElement.classList.add('active');
+}
+
+function renderKetoForm(m, dayKey) {
+  const curVal = m ? m.value : null;
+  const curNote = m ? (m.note || '') : '';
+  const curTime = m ? fmtTime(m.ts) : '08:00';
+  const choices = [
+    { v: 0, lbl: 'Negativo' },
+    { v: 5, lbl: 'Tracce' },
+    { v: 15, lbl: '+' },
+    { v: 40, lbl: '++' },
+    { v: 80, lbl: '+++' },
+    { v: 160, lbl: '++++' }
+  ];
+  const pills = choices.map(c =>
+    `<button class="form-radio-pill${c.v === curVal ? ' active' : ''}" type="button" onclick="selectKetoEdit(${c.v}, this)">${c.lbl}</button>`
+  ).join('');
+  return `
+    <div class="meas-form">
+      <label class="form-label">Ora</label>
+      <input type="time" id="ketoTime" class="appt-input" value="${curTime}">
+
+      <label class="form-label">Risultato strisce</label>
+      <div class="form-radio-row" id="ketoChoices">${pills}</div>
+      <input type="hidden" id="ketoValueEdit" value="${curVal != null ? curVal : ''}">
+
+      <label class="form-label">Nota (opzionale)</label>
+      <textarea id="ketoNoteEdit" class="appt-input" rows="2" maxlength="500">${escapeHtml(curNote)}</textarea>
+
+      <div class="meas-form-actions">
+        ${m ? `<button class="appt-form-del" onclick="deleteMeasFromForm()">Elimina</button>` : ''}
+        <button class="appt-form-save" onclick="saveMeasFromForm()">Salva</button>
+      </div>
+    </div>`;
+}
+
+function selectKetoEdit(v, btn) {
+  document.querySelectorAll('#ketoChoices .form-radio-pill').forEach(p => p.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('ketoValueEdit').value = v;
+}
+
+function renderBpForm(m, dayKey) {
+  const curSys = m ? m.value : '';
+  const curDia = m ? m.value2 : '';
+  const curNote = m ? (m.note || '') : '';
+  const curTime = m ? fmtTime(m.ts) : '08:00';
+  return `
+    <div class="meas-form">
+      <label class="form-label">Ora</label>
+      <input type="time" id="bpTimeEdit" class="appt-input" value="${curTime}">
+
+      <div class="form-row">
+        <div>
+          <label class="form-label">Massima</label>
+          <input type="number" id="bpSysEdit" class="appt-input" inputmode="numeric" min="60" max="220" value="${curSys}">
+        </div>
+        <div>
+          <label class="form-label">Minima</label>
+          <input type="number" id="bpDiaEdit" class="appt-input" inputmode="numeric" min="40" max="140" value="${curDia}">
+        </div>
+      </div>
+
+      <label class="form-label">Nota (opzionale)</label>
+      <textarea id="bpNoteEdit" class="appt-input" rows="2" maxlength="500">${escapeHtml(curNote)}</textarea>
+
+      <div class="meas-form-actions">
+        ${m ? `<button class="appt-form-del" onclick="deleteMeasFromForm()">Elimina</button>` : ''}
+        <button class="appt-form-save" onclick="saveMeasFromForm()">Salva</button>
+      </div>
+    </div>`;
+}
+
+function renderWeightForm(m, dayKey) {
+  const curVal = m ? m.value : '';
+  const curNote = m ? (m.note || '') : '';
+  const curTime = m ? fmtTime(m.ts) : '08:00';
+  return `
+    <div class="meas-form">
+      <label class="form-label">Ora</label>
+      <input type="time" id="wTimeEdit" class="appt-input" value="${curTime}">
+
+      <label class="form-label">Peso (kg)</label>
+      <input type="number" id="wValueEdit" class="appt-input" inputmode="decimal" min="30" max="200" step="0.1" value="${curVal}">
+
+      <label class="form-label">Nota (opzionale)</label>
+      <textarea id="wNoteEdit" class="appt-input" rows="2" maxlength="500">${escapeHtml(curNote)}</textarea>
+
+      <div class="meas-form-actions">
+        ${m ? `<button class="appt-form-del" onclick="deleteMeasFromForm()">Elimina</button>` : ''}
+        <button class="appt-form-save" onclick="saveMeasFromForm()">Salva</button>
+      </div>
+    </div>`;
+}
+
+/* ---------- SAVE / DELETE MISURAZIONE ---------- */
+function buildTimestamp(dayKey, timeStr) {
+  // Costruisco timestamp dal dayKey + HH:MM
+  const parts = dayKey.split('-');
+  const t = (timeStr || '08:00').split(':');
+  const d = new Date(parseInt(parts[0]), parseInt(parts[1])-1, parseInt(parts[2]),
+                     parseInt(t[0]) || 0, parseInt(t[1]) || 0, 0, 0);
+  return d.getTime();
+}
+
+function saveMeasFromForm() {
+  const ctx = window._editingMeas;
+  if (!ctx) return;
+  const { id, dayKey, kind, isNew } = ctx;
+
+  let rec = null;
+  if (kind === 'glicemia') {
+    const sub = document.querySelector('input[name="glucSub"]:checked')?.value || 'digiuno';
+    const timing = parseInt(document.querySelector('input[name="glucTiming"]:checked')?.value || '1');
+    const time = document.getElementById('glucTime').value;
+    const val = parseInt(document.getElementById('glucValueEdit').value);
+    const note = document.getElementById('glucNoteEdit').value.trim();
+    if (isNaN(val)) { toast('Manca il valore'); return; }
+    rec = {
+      kind: 'glicemia',
+      subkind: sub,
+      timing: sub === 'digiuno' ? null : timing,
+      value: val,
+      note,
+      ts: buildTimestamp(dayKey, time)
+    };
+  } else if (kind === 'chetoni') {
+    const v = document.getElementById('ketoValueEdit').value;
+    if (v === '' || v == null) { toast('Scegli un risultato'); return; }
+    const time = document.getElementById('ketoTime').value;
+    const note = document.getElementById('ketoNoteEdit').value.trim();
+    rec = {
+      kind: 'chetoni',
+      subkind: 'mattina',
+      value: parseInt(v),
+      note,
+      ts: buildTimestamp(dayKey, time)
+    };
+  } else if (kind === 'pressione') {
+    const sys = parseInt(document.getElementById('bpSysEdit').value);
+    const dia = parseInt(document.getElementById('bpDiaEdit').value);
+    if (isNaN(sys) || isNaN(dia)) { toast('Mancano valori'); return; }
+    const time = document.getElementById('bpTimeEdit').value;
+    const note = document.getElementById('bpNoteEdit').value.trim();
+    rec = {
+      kind: 'pressione',
+      value: sys, value2: dia,
+      note,
+      ts: buildTimestamp(dayKey, time)
+    };
+  } else if (kind === 'peso') {
+    const val = parseFloat(document.getElementById('wValueEdit').value);
+    if (isNaN(val) || val <= 0) { toast('Peso non valido'); return; }
+    const time = document.getElementById('wTimeEdit').value;
+    const note = document.getElementById('wNoteEdit').value.trim();
+    rec = {
+      kind: 'peso',
+      value: val,
+      note,
+      ts: buildTimestamp(dayKey, time)
+    };
+  }
+
+  if (!rec) return;
+
+  if (isNew) {
+    rec.id = uid();
+    DATA.measurements.push(rec);
+    saveData();
+    if (typeof syncPushMeasurement === 'function') syncPushMeasurement(rec);
+    toast('Aggiunta');
+  } else {
+    const ix = DATA.measurements.findIndex(x => x.id === id);
+    if (ix >= 0) {
+      rec.id = id;
+      DATA.measurements[ix] = rec;
+      saveData();
+      if (typeof syncPushMeasurement === 'function') syncPushMeasurement(rec);
+      toast('Aggiornata');
+    }
+  }
+  window._editingMeas = null;
+  // ritorno alla vista giorno
+  openDayView(dayKey);
+  // aggiorno calendario dietro
+  if (typeof renderCalendario === 'function') renderCalendario();
+}
+
+function deleteMeasFromForm() {
+  const ctx = window._editingMeas;
+  if (!ctx || !ctx.id) return;
+  showConfirm('Cancellare questa misurazione?', 'L\'azione non si può annullare.', () => {
+    DATA.measurements = DATA.measurements.filter(x => x.id !== ctx.id);
+    saveData();
+    if (typeof syncDeleteMeasurement === 'function') syncDeleteMeasurement(ctx.id);
+    window._editingMeas = null;
+    toast('Cancellata');
+    openDayView(ctx.dayKey);
+    if (typeof renderCalendario === 'function') renderCalendario();
+  });
+}
+
+/* ---------- MODIFICA PASTI DA CALENDARIO ---------- */
+function openMealEditFromCalendar(mealId, dayKey) {
+  // Se mealId è null → devo prima far scegliere lo slot
+  if (!mealId) {
+    openMealSlotChooser(dayKey);
+    return;
+  }
+  // Cerco il meal
+  const meal = DATA.meals.find(m => m.id === mealId);
+  if (!meal) return;
+  const slot = SLOT_BY_ID[meal.mealId];
+  openMealEdit(meal, dayKey, slot ? slot.id : meal.mealId);
+}
+
+function openMealSlotChooser(dayKey) {
+  const existing = DATA.meals.filter(m => dateOf(m.ts) === dayKey);
+  const existingIds = new Set(existing.map(m => m.mealId));
+  const pills = SLOTS.map(s => {
+    const used = existingIds.has(s.id);
+    if (used) {
+      // Se esiste già, tap apre per modifica
+      const existingMeal = existing.find(m => m.mealId === s.id);
+      return `<button class="day-quick" onclick="openMealEditFromCalendar('${existingMeal.id}','${dayKey}')">
+        <span class="day-quick-ico">${s.icon}</span><span>${s.name} ✓</span>
+      </button>`;
+    }
+    return `<button class="day-quick" onclick="openMealEdit(null,'${dayKey}','${s.id}')">
+      <span class="day-quick-ico">${s.icon}</span><span>${s.name}</span>
+    </button>`;
+  }).join('');
+  document.getElementById('sheetTitle').textContent = 'Quale pasto?';
+  document.getElementById('sheetSub').textContent = formatDateLong(dayKey);
+  document.getElementById('sheetBody').innerHTML = `
+    <div class="day-section-title">Scegli il pasto da aggiungere o modificare</div>
+    <div class="day-quick-grid">${pills}</div>
+    <button class="day-add-mini" style="width:100%;margin-top:8px" onclick="openDayView('${dayKey}')">‹ indietro</button>`;
+}
+
+function openMealEdit(meal, dayKey, slotId) {
+  // Imposto stato per il modulo meals.js, ma in modalità "contestualizzata"
+  const slot = SLOT_BY_ID[slotId];
+  if (!slot) return;
+  currentMeal = slotId;
+  currentItems = meal && meal.items ? JSON.parse(JSON.stringify(meal.items)) : [];
+  currentNote = meal && meal.note ? String(meal.note) : '';
+
+  // Salvo contesto: stiamo modificando un meal di un giorno specifico
+  window._editingMealCtx = {
+    mealId: meal ? meal.id : null,
+    dayKey,
+    slotId,
+    ts: meal ? meal.ts : buildTimestamp(dayKey, slot.time.split('-')[0] || '12:00')
+  };
+
+  document.getElementById('sheetTitle').textContent = (meal ? 'Modifica ' : 'Aggiungi ') + slot.name;
+  document.getElementById('sheetSub').textContent = formatDateLong(dayKey);
+
+  renderMealEditBody();
+}
+
+function renderMealEditBody() {
+  const ctx = window._editingMealCtx;
+  if (!ctx) return;
+  const slot = SLOT_BY_ID[ctx.slotId];
+
+  // Costruisco markup simile a renderMealDetail ma standalone
+  let html = '<div class="meal-edit-from-cal">';
+
+  // Lista alimenti
+  if (currentItems.length > 0) {
+    html += `<div class="meal-items">`;
+    currentItems.forEach((it, idx) => {
+      if (it.custom) {
+        html += `<div class="meal-item">
+          <div class="meal-item-main">
+            <div class="meal-item-name">${escapeHtml(it.custom.name)} <span class="meal-item-custom-tag">tuo</span></div>
+          </div>
+          <div class="meal-item-qty">
+            <button class="qty-btn" onclick="adjustQtyFromCal(${idx}, -1)">−</button>
+            <span class="qty-val">${it.qty}<span class="qty-unit">${escapeHtml(it.custom.unit)}</span></span>
+            <button class="qty-btn" onclick="adjustQtyFromCal(${idx}, 1)">+</button>
+          </div>
+          <button class="meal-item-del" onclick="removeItemFromCal(${idx})">✕</button>
+        </div>`;
+      } else {
+        const f = FOOD_BY_ID[it.foodId];
+        if (!f) return;
+        html += `<div class="meal-item">
+          <div class="meal-item-main">
+            <div class="meal-item-name">${escapeHtml(f.name)}</div>
+          </div>
+          <div class="meal-item-qty">
+            <button class="qty-btn" onclick="adjustQtyFromCal(${idx}, -1)">−</button>
+            <span class="qty-val">${it.qty}<span class="qty-unit">${f.unit}</span></span>
+            <button class="qty-btn" onclick="adjustQtyFromCal(${idx}, 1)">+</button>
+          </div>
+          <button class="meal-item-del" onclick="removeItemFromCal(${idx})">✕</button>
+        </div>`;
+      }
+    });
+    html += `</div>`;
+  } else {
+    html += `<div class="empty-meal"><div class="empty-meal-emoji">🍽️</div><div>Nessun alimento per ora.</div></div>`;
+  }
+
+  // Bottone aggiungi alimento — riusa openFoodSheet
+  html += `<button class="add-item-btn" onclick="openFoodSheetFromCal()">+ aggiungi alimento</button>`;
+
+  // Nota
+  html += `
+    <div class="meal-note-block">
+      <label class="meal-note-label">Nota</label>
+      <textarea id="mealNoteFromCal" class="meal-note-textarea" maxlength="500" rows="2"
+        placeholder="(opzionale)">${escapeHtml(currentNote || '')}</textarea>
+    </div>`;
+
+  // Azioni
+  html += `<div class="meas-form-actions">
+    ${ctx.mealId ? `<button class="appt-form-del" onclick="deleteMealFromCal()">Elimina pasto</button>` : ''}
+    <button class="appt-form-save" onclick="saveMealFromCal()">Salva</button>
+  </div>`;
+
+  html += '</div>';
+  document.getElementById('sheetBody').innerHTML = html;
+
+  // Listener nota
+  const nt = document.getElementById('mealNoteFromCal');
+  if (nt) {
+    nt.addEventListener('input', () => { currentNote = nt.value; });
+  }
+}
+
+function adjustQtyFromCal(idx, sign) {
+  const it = currentItems[idx];
+  if (!it) return;
+  if (it.custom) {
+    const step = it.custom.unit === 'pz' ? 1 : 10;
+    const next = it.qty + (sign * step);
+    if (next < step) return;
+    it.qty = next;
+    renderMealEditBody();
+    return;
+  }
+  const f = FOOD_BY_ID[it.foodId];
+  if (!f) return;
+  const step = f.step || 10;
+  const next = it.qty + (sign * step);
+  if (next < step) return;
+  if (next > f.qty * 5 + step) return;
+  it.qty = next;
+  renderMealEditBody();
+}
+
+function removeItemFromCal(idx) {
+  currentItems.splice(idx, 1);
+  renderMealEditBody();
+}
+
+function openFoodSheetFromCal() {
+  // Riusa openFoodSheet del modulo meals.js — quando aggiunge, fa autosave
+  // ma noi vogliamo solo currentItems aggiornata. autosave è "safe" qui
+  // perché currentMeal è settato e la registrazione finirà sul giorno giusto solo
+  // quando saveMealFromCal viene chiamato. Però autosave salverebbe ora.
+  // Per evitare side effect, lo intercetto: temporaneamente disattivo autosave.
+  window._suppressAutoSave = true;
+  openFoodSheet();
+}
+
+function saveMealFromCal() {
+  const ctx = window._editingMealCtx;
+  if (!ctx) return;
+  const hasItems = currentItems.length > 0;
+  const hasNote = (currentNote || '').trim().length > 0;
+  if (!hasItems && !hasNote) {
+    toast('Aggiungi almeno un alimento o una nota');
+    return;
+  }
+  let recId = ctx.mealId;
+  const e = {
+    id: recId || uid(),
+    ts: ctx.ts,
+    mealId: ctx.slotId,
+    items: hasItems ? JSON.parse(JSON.stringify(currentItems)) : [],
+    note: hasNote ? currentNote.trim() : null
+  };
+  const ix = DATA.meals.findIndex(m => m.id === e.id);
+  if (ix >= 0) DATA.meals[ix] = e;
+  else DATA.meals.push(e);
+  saveData();
+  if (typeof syncPushMeal === 'function') syncPushMeal(e);
+  toast(recId ? 'Pasto aggiornato' : 'Pasto aggiunto');
+
+  // reset
+  currentItems = [];
+  currentNote = '';
+  currentMeal = null;
+  const dk = ctx.dayKey;
+  window._editingMealCtx = null;
+  window._suppressAutoSave = false;
+  openDayView(dk);
+  if (typeof renderCalendario === 'function') renderCalendario();
+}
+
+function deleteMealFromCal() {
+  const ctx = window._editingMealCtx;
+  if (!ctx || !ctx.mealId) return;
+  showConfirm('Cancellare questo pasto?', 'L\'azione non si può annullare.', () => {
+    const id = ctx.mealId;
+    DATA.meals = DATA.meals.filter(m => m.id !== id);
+    saveData();
+    if (typeof syncDeleteMeal === 'function') syncDeleteMeal(id);
+    currentItems = []; currentNote = ''; currentMeal = null;
+    const dk = ctx.dayKey;
+    window._editingMealCtx = null;
+    window._suppressAutoSave = false;
+    toast('Pasto cancellato');
+    openDayView(dk);
+    if (typeof renderCalendario === 'function') renderCalendario();
+  });
 }
 
 /* ---------- FORM APPUNTAMENTO ---------- */
