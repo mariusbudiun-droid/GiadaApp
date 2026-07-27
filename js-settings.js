@@ -7,6 +7,7 @@ function renderSettings() {
 
   const inviteCode = SYNC.inviteCode || '——————';
   const displayName = SYNC.profile?.display_name || 'Genitore';
+  const child = getActiveChild();
 
   let html = '';
   html += `<div class="hdr-block">
@@ -54,8 +55,22 @@ function renderSettings() {
       <button class="theme-opt ${CURRENT_THEME==='light'?'active':''}" onclick="selectTheme('light')">Chiara</button>
       <button class="theme-opt ${CURRENT_THEME==='dark'?'active':''}" onclick="selectTheme('dark')">Scura</button>
       <button class="theme-opt ${CURRENT_THEME==='auto'?'active':''}" onclick="selectTheme('auto')">Auto</button>
+      <button class="theme-opt ${CURRENT_THEME==='night'?'active':''}" onclick="selectTheme('night')">Notte</button>
     </div>
-    <div class="muted small">"Auto" segue le impostazioni del telefono.</div>`;
+    <div class="muted small">"Auto" segue le impostazioni del telefono. "Notte" è rosso su nero, pensata per le poppate senza svegliarsi del tutto con la luce.</div>`;
+
+  // Dati
+  html += `<div class="card-eyebrow eb-spaced">dati</div>
+    <button class="set-row" onclick="exportKinBackup()">
+      <div><div class="set-row-label">Esporta backup</div><div class="set-row-sub">Salva un file con tutti i dati</div></div>
+      <span class="set-row-caret">›</span>
+    </button>`;
+  if (child) {
+    html += `<button class="set-row" onclick="exportKinPdf()">
+      <div><div class="set-row-label">Esporta PDF per il pediatra</div><div class="set-row-sub">Crescita, vaccini, traguardi di ${escapeHtml(child.name)}</div></div>
+      <span class="set-row-caret">›</span>
+    </button>`;
+  }
 
   html += `<div class="muted center" style="margin-top:24px;font-size:12px;">Kin v${APP_VERSION}</div>`;
 

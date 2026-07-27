@@ -1,4 +1,6 @@
-/* KIN · Diario / Note libere */
+/* KIN · Diario / Note libere / Foto
+   Timeline unica raggruppata per giorno.
+   ========================================================= */
 'use strict';
 
 function renderDiary() {
@@ -17,16 +19,20 @@ function renderDiary() {
     <h1 class="hdr-title">${escapeHtml(child.name)}</h1>
   </div>`;
 
-  html += `<button class="diary-add-btn" onclick="openQuickNote()">+ nuova nota</button>`;
+  html += `<div class="diary-add-row">
+    <button class="diary-add-btn" onclick="openQuickNote()">+ nota</button>
+    <button class="diary-add-btn" onclick="openPhotoCapture()">+ foto</button>
+  </div>`;
 
-  const notes = eventsForChild(child.id).filter(e => e.kind === 'note').sort((a,b) => b.ts - a.ts);
+  const entries = eventsForChild(child.id)
+    .filter(e => e.kind === 'note' || e.kind === 'photo')
+    .sort((a,b) => b.ts - a.ts);
 
-  if (notes.length === 0) {
-    html += `<div class="empty-card"><div class="empty-text">Ancora nessuna nota.<br>Segna qui pensieri, momenti, piccole cose.</div></div>`;
+  if (entries.length === 0) {
+    html += '<div class="empty-card"><div class="empty-text">Ancora niente qui.<br>Segna pensieri, momenti, foto.</div></div>';
   } else {
-    // Raggruppo per data
     const byDay = {};
-    notes.forEach(n => {
+    entries.forEach(n => {
       const k = dateOf(n.ts);
       (byDay[k] = byDay[k] || []).push(n);
     });
@@ -41,11 +47,22 @@ function renderDiary() {
       html += `<div class="diary-day-eyebrow">${label}</div>`;
       byDay[dayKey].forEach(n => {
         const time = fmtTime(n.ts);
-        const text = (n.data?.text || '').trim();
-        html += `<div class="diary-card" onclick="openEventForm('note', '${n.id}')">
-          <div class="diary-card-time">${time}</div>
-          <div class="diary-card-text">${escapeHtml(text)}</div>
-        </div>`;
+        if (n.kind === 'note') {
+          const text = (n.data && n.data.text || '').trim();
+          html += `<div class="diary-card" onclick="openEventForm('note', '${n.id}')">
+            <div class="diary-card-time">${time}</div>
+            <div class="diary-card-text">${escapeHtml(text)}</div>
+          </div>`;
+        } else if (n.kind === 'photo') {
+          const caption = n.data && n.data.caption;
+          html += `<div class="diary-photo-card" onclick="openPhotoFullscreen('${n.id}')">
+            <img src="${n.data.image}" class="diary-photo-thumb" alt="foto">
+            <div class="diary-photo-meta">
+              <div class="diary-card-time">${time}</div>
+              ${caption ? `<div class="diary-photo-caption">${escapeHtml(caption)}</div>` : ''}
+            </div>
+          </div>`;
+        }
       });
     });
   }

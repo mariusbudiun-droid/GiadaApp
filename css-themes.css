@@ -50,3 +50,24 @@
 
   --shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
 }
+
+/* ---------- NOTTE (vera, rosso su nero — non abbaglia durante le poppate) ---------- */
+.theme-night {
+  --bg: #000000;
+  --paper: #140505;
+  --surface: #1c0808;
+  --border: #3a1212;
+
+  --text-dark: #e05a5a;
+  --text-medium: #a84545;
+  --text-light: #6e3030;
+
+  --accent: #ff6b6b;
+  --accent-dark: #ff8888;
+  --accent-soft: #2a0d0d;
+
+  --alert-text: #ff9090;
+  --alert-bg: #3a1010;
+
+  --shadow: none;
+}

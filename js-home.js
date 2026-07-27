@@ -14,6 +14,26 @@ function isInfantChild(child) {
   return age.totalMonths < INFANT_MAX_MONTHS;
 }
 
+/* Anniversario automatico: rileva se oggi è esattamente un mese o un anno
+   di vita (0 settimane e 0 giorni di resto oltre il mese/anno pieno). */
+function checkAnniversaryToday(child) {
+  const age = ageOf(child.birth_date);
+  if (age.isNegative) return null;
+  // Prime settimane (utile solo nei primissimi mesi)
+  if (age.totalDays === 7) return '1 settimana';
+  if (age.totalDays === 14) return '2 settimane';
+  if (age.totalDays === 21) return '3 settimane';
+  // Esattamente N mesi (ancora nel primo anno)
+  if (age.ymdw.years === 0 && age.ymdw.weeks === 0 && age.ymdw.days === 0 && age.ymdw.months >= 1) {
+    return age.ymdw.months + (age.ymdw.months === 1 ? ' mese' : ' mesi');
+  }
+  // Esattamente N anni
+  if (age.ymdw.months === 0 && age.ymdw.weeks === 0 && age.ymdw.days === 0 && age.ymdw.years >= 1) {
+    return age.ymdw.years === 1 ? '1 anno' : age.ymdw.years + ' anni';
+  }
+  return null;
+}
+
 function renderHome() {
   const c = document.getElementById('homeContent');
   if (!c) return;
@@ -39,17 +59,27 @@ function renderHome() {
   // SWITCHER FIGLIO
   html += renderChildSwitcher();
 
-  // GREETING
+  // GREETING + toggle notte rapido
   const greetName = SYNC.profile?.display_name || '';
   const hour = now.getHours();
   let greet = 'buongiorno';
   if (hour >= 12 && hour < 18) greet = 'buon pomeriggio';
   else if (hour >= 18) greet = 'buonasera';
   else if (hour < 6) greet = 'è ancora notte';
-  html += `<div class="hdr-block">
-    <div class="hdr-eyebrow">${greet}${greetName ? ', ' + escapeHtml(greetName) : ''}</div>
-    <h1 class="hdr-title">${escapeHtml(child.name)}</h1>
+  const isNight = (typeof CURRENT_THEME !== 'undefined' && CURRENT_THEME === 'night');
+  html += `<div class="hdr-block hdr-with-toggle">
+    <div class="hdr-block-text">
+      <div class="hdr-eyebrow">${greet}${greetName ? ', ' + escapeHtml(greetName) : ''}</div>
+      <h1 class="hdr-title">${escapeHtml(child.name)}</h1>
+    </div>
+    <button class="night-toggle-btn ${isNight?'active':''}" onclick="toggleNightMode()" aria-label="Modalità notte">${isNight ? '☀️' : '🌙'}</button>
   </div>`;
+
+  // ANNIVERSARIO DI OGGI (se capita)
+  const anniversary = (typeof checkAnniversaryToday === 'function') ? checkAnniversaryToday(child) : null;
+  if (anniversary) {
+    html += `<div class="anniversary-card">🎉 Oggi ${escapeHtml(child.name)} compie ${escapeHtml(anniversary)}!</div>`;
+  }
 
   // AGE CARD
   html += `<div class="age-card">
@@ -149,6 +179,9 @@ function switchChild(id) {
   renderHome();
   if (document.getElementById('sec-tracking').classList.contains('active')) {
     if (typeof renderTracking === 'function') renderTracking();
+  }
+  if (document.getElementById('sec-salute').classList.contains('active')) {
+    if (typeof renderHealth === 'function') renderHealth();
   }
   if (document.getElementById('sec-diario').classList.contains('active')) {
     if (typeof renderDiary === 'function') renderDiary();

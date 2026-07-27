@@ -24,20 +24,34 @@ function selectTheme(mode) {
   CURRENT_THEME = mode;
   localStorage.setItem(THEME_KEY, mode);
   applyTheme();
-  renderSettings();
+  if (typeof renderSettings === 'function') renderSettings();
 }
 
 function applyTheme() {
   const doc = document.documentElement;
-  doc.classList.remove('theme-light', 'theme-dark');
+  doc.classList.remove('theme-light', 'theme-dark', 'theme-night');
   let effective = CURRENT_THEME;
   if (effective === 'auto') {
     effective = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
   }
   doc.classList.add('theme-' + effective);
-  // Meta theme-color
   const meta = document.querySelector('meta[name="theme-color"]');
-  if (meta) meta.content = effective === 'dark' ? '#1A2530' : '#FBF7F2';
+  if (meta) {
+    meta.content = effective === 'night' ? '#000000' : (effective === 'dark' ? '#1A2530' : '#FBF7F2');
+  }
+}
+
+/* Toggle rapido modalità notte (accessibile da Home con un tap, per le poppate notturne) */
+const NIGHT_PREV_KEY = 'kin_theme_prev_v1';
+function toggleNightMode() {
+  if (CURRENT_THEME === 'night') {
+    const prev = localStorage.getItem(NIGHT_PREV_KEY) || 'auto';
+    selectTheme(prev);
+  } else {
+    localStorage.setItem(NIGHT_PREV_KEY, CURRENT_THEME);
+    selectTheme('night');
+  }
+  if (typeof renderHome === 'function') renderHome();
 }
 
 /* Watch OS theme changes when in auto */

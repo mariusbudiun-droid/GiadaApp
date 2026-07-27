@@ -3,7 +3,7 @@
    ========================================================= */
 'use strict';
 
-let currentHealthTab = 'vaccini'; // 'vaccini' | 'crescita' | 'appuntamenti' | 'farmaci'
+let currentHealthTab = 'vaccini'; // 'vaccini' | 'crescita' | 'denti' | 'primevolte' | 'appuntamenti' | 'farmaci'
 
 function renderHealth() {
   const c = document.getElementById('healthContent');
@@ -21,12 +21,16 @@ function renderHealth() {
   html += `<div class="health-tabs">
     <button class="health-tab ${currentHealthTab==='vaccini'?'active':''}" onclick="setHealthTab('vaccini')">Vaccini</button>
     <button class="health-tab ${currentHealthTab==='crescita'?'active':''}" onclick="setHealthTab('crescita')">Crescita</button>
+    <button class="health-tab ${currentHealthTab==='denti'?'active':''}" onclick="setHealthTab('denti')">Denti</button>
+    <button class="health-tab ${currentHealthTab==='primevolte'?'active':''}" onclick="setHealthTab('primevolte')">Prime volte</button>
     <button class="health-tab ${currentHealthTab==='appuntamenti'?'active':''}" onclick="setHealthTab('appuntamenti')">Appuntamenti</button>
     <button class="health-tab ${currentHealthTab==='farmaci'?'active':''}" onclick="setHealthTab('farmaci')">Farmaci</button>
   </div>`;
 
   if (currentHealthTab === 'vaccini') html += renderVaccineSection(child);
   else if (currentHealthTab === 'crescita') html += renderGrowthSection(child);
+  else if (currentHealthTab === 'denti') html += renderTeethSection(child);
+  else if (currentHealthTab === 'primevolte') html += renderFirstsSection(child);
   else if (currentHealthTab === 'appuntamenti') html += renderAppointmentsSection(child);
   else if (currentHealthTab === 'farmaci') html += renderMedsSection(child);
 
