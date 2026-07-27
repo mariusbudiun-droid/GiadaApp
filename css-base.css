@@ -836,3 +836,8 @@ textarea.ev-input { resize: vertical; min-height: 60px; font-size: 15px; }
   background: var(--alert-text);
   color: white;
 }
+
+/* Quick grid a 3 colonne (bimbi grandi, meno azioni disponibili) */
+.quick-grid-3 {
+  grid-template-columns: repeat(3, 1fr);
+}

@@ -4,6 +4,16 @@
 let currentAgeMode = 'ymdw';   // 'ymdw' | 'mwd' | 'wd' | 'd'
 let currentAgeShowCorrected = false;
 
+/* Sotto questa soglia mostriamo il tracking da neonato/bimbo piccolo
+   (poppate, sonno, cambi). Sopra, quello non ha più senso: restano
+   crescita, febbre, nota (e in futuro le milestone). */
+const INFANT_MAX_MONTHS = 36;
+
+function isInfantChild(child) {
+  const age = ageOf(child.birth_date);
+  return age.totalMonths < INFANT_MAX_MONTHS;
+}
+
 function renderHome() {
   const c = document.getElementById('homeContent');
   if (!c) return;
@@ -60,30 +70,59 @@ function renderHome() {
     <div class="age-birth-hint">Nato/a il ${fmtDateLong(parseDateStr(child.birth_date))}</div>
   </div>`;
 
-  // ULTIMO EVENTO IMPORTANTE (poppata / cambio / sonno)
-  const lastFeed = lastEventOfKind(child.id, 'feed');
-  const lastDiaper = lastEventOfKind(child.id, 'diaper');
-  const lastSleep = lastEventOfKind(child.id, 'sleep');
-  const anyLast = [lastFeed, lastDiaper, lastSleep].filter(Boolean);
-  if (anyLast.length > 0) {
-    html += `<div class="card-eyebrow eb-spaced">le ultime cose</div>`;
-    html += `<div class="last-events">`;
-    if (lastFeed) html += renderLastCard('poppata', lastFeed, describeFeed(lastFeed));
-    if (lastDiaper) html += renderLastCard('cambio', lastDiaper, describeDiaper(lastDiaper));
-    if (lastSleep) html += renderLastCard('sonno', lastSleep, describeSleep(lastSleep));
-    html += `</div>`;
+  const infantMode = isInfantChild(child);
+
+  // ULTIMO EVENTO IMPORTANTE (poppata / cambio / sonno) — solo per bimbi piccoli
+  if (infantMode) {
+    const lastFeed = lastEventOfKind(child.id, 'feed');
+    const lastDiaper = lastEventOfKind(child.id, 'diaper');
+    const lastSleep = lastEventOfKind(child.id, 'sleep');
+    const anyLast = [lastFeed, lastDiaper, lastSleep].filter(Boolean);
+    if (anyLast.length > 0) {
+      html += `<div class="card-eyebrow eb-spaced">le ultime cose</div>`;
+      html += `<div class="last-events">`;
+      if (lastFeed) html += renderLastCard('poppata', lastFeed, describeFeed(lastFeed));
+      if (lastDiaper) html += renderLastCard('cambio', lastDiaper, describeDiaper(lastDiaper));
+      if (lastSleep) html += renderLastCard('sonno', lastSleep, describeSleep(lastSleep));
+      html += `</div>`;
+    }
+  } else {
+    // Per bimbi più grandi: mostro solo l'ultima misura di crescita e l'ultima nota, se ci sono
+    const lastGrowth = lastEventOfKind(child.id, 'growth');
+    const lastNote = lastEventOfKind(child.id, 'note');
+    const anyLast = [lastGrowth, lastNote].filter(Boolean);
+    if (anyLast.length > 0) {
+      html += `<div class="card-eyebrow eb-spaced">le ultime cose</div>`;
+      html += `<div class="last-events">`;
+      if (lastGrowth) {
+        const parts = [];
+        if (lastGrowth.data?.weight_kg) parts.push(`${lastGrowth.data.weight_kg} kg`);
+        if (lastGrowth.data?.height_cm) parts.push(`${lastGrowth.data.height_cm} cm`);
+        html += renderLastCard('crescita', lastGrowth, parts.join(' · ') || 'misurazione registrata');
+      }
+      if (lastNote) html += renderLastCard('nota', lastNote, (lastNote.data?.text || '').slice(0, 80));
+      html += `</div>`;
+    }
   }
 
-  // SHORTCUT
+  // SHORTCUT — set diverso in base all'età
   html += `<div class="card-eyebrow eb-spaced">registra rapidamente</div>`;
-  html += `<div class="quick-grid">
-    <button class="quick-btn" onclick="openQuickFeed()"><span class="quick-ico">🍼</span><span>Poppata</span></button>
-    <button class="quick-btn" onclick="openQuickSleep()"><span class="quick-ico">💤</span><span>Sonno</span></button>
-    <button class="quick-btn" onclick="openQuickDiaper()"><span class="quick-ico">👶</span><span>Cambio</span></button>
-    <button class="quick-btn" onclick="openQuickGrowth()"><span class="quick-ico">📏</span><span>Peso</span></button>
-    <button class="quick-btn" onclick="openQuickTemp()"><span class="quick-ico">🌡️</span><span>Febbre</span></button>
-    <button class="quick-btn" onclick="openQuickNote()"><span class="quick-ico">📝</span><span>Nota</span></button>
-  </div>`;
+  if (infantMode) {
+    html += `<div class="quick-grid">
+      <button class="quick-btn" onclick="openQuickFeed()"><span class="quick-ico">🍼</span><span>Poppata</span></button>
+      <button class="quick-btn" onclick="openQuickSleep()"><span class="quick-ico">💤</span><span>Sonno</span></button>
+      <button class="quick-btn" onclick="openQuickDiaper()"><span class="quick-ico">👶</span><span>Cambio</span></button>
+      <button class="quick-btn" onclick="openQuickGrowth()"><span class="quick-ico">📏</span><span>Peso</span></button>
+      <button class="quick-btn" onclick="openQuickTemp()"><span class="quick-ico">🌡️</span><span>Febbre</span></button>
+      <button class="quick-btn" onclick="openQuickNote()"><span class="quick-ico">📝</span><span>Nota</span></button>
+    </div>`;
+  } else {
+    html += `<div class="quick-grid quick-grid-3">
+      <button class="quick-btn" onclick="openQuickGrowth()"><span class="quick-ico">📏</span><span>Crescita</span></button>
+      <button class="quick-btn" onclick="openQuickTemp()"><span class="quick-ico">🌡️</span><span>Febbre</span></button>
+      <button class="quick-btn" onclick="openQuickNote()"><span class="quick-ico">📝</span><span>Nota</span></button>
+    </div>`;
+  }
 
   c.innerHTML = html;
 }

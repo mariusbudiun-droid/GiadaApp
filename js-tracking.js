@@ -367,16 +367,28 @@ function renderTracking() {
     <h1 class="hdr-title">${escapeHtml(child.name)}</h1>
   </div>`;
 
-  // Filtro tipi (per ora "tutti", ma predisposto)
-  const filterKind = window.__trackingFilter || 'all';
-  const kinds = [
-    { key: 'all', label: 'Tutto' },
-    { key: 'feed', label: 'Poppate' },
-    { key: 'sleep', label: 'Sonno' },
-    { key: 'diaper', label: 'Cambi' },
-    { key: 'growth', label: 'Crescita' },
-    { key: 'temperature', label: 'Febbre' }
-  ];
+  // Filtro tipi — diverso in base all'età
+  const infantMode = isInfantChild(child);
+  const kinds = infantMode
+    ? [
+        { key: 'all', label: 'Tutto' },
+        { key: 'feed', label: 'Poppate' },
+        { key: 'sleep', label: 'Sonno' },
+        { key: 'diaper', label: 'Cambi' },
+        { key: 'growth', label: 'Crescita' },
+        { key: 'temperature', label: 'Febbre' }
+      ]
+    : [
+        { key: 'all', label: 'Tutto' },
+        { key: 'growth', label: 'Crescita' },
+        { key: 'temperature', label: 'Febbre' },
+        { key: 'note', label: 'Note' }
+      ];
+  let filterKind = window.__trackingFilter || 'all';
+  if (!kinds.some(k => k.key === filterKind)) {
+    filterKind = 'all';
+    window.__trackingFilter = 'all';
+  }
   html += `<div class="tk-filter">`;
   kinds.forEach(k => {
     html += `<button class="tk-filter-btn ${filterKind===k.key?'active':''}" onclick="setTrackingFilter('${k.key}')">${k.label}</button>`;
