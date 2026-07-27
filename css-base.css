@@ -841,3 +841,80 @@ textarea.ev-input { resize: vertical; min-height: 60px; font-size: 15px; }
 .quick-grid-3 {
   grid-template-columns: repeat(3, 1fr);
 }
+
+/* ============== IN QUESTO PERIODO — fasi di sviluppo (sezione primaria) ============== */
+.phase-list-wrap {
+  display: flex; flex-direction: column; gap: 8px;
+}
+.phase-card {
+  background: linear-gradient(135deg, var(--surface) 0%, var(--accent-soft) 100%);
+  border: 1px solid var(--accent);
+  border-radius: 16px;
+  padding: 15px 17px;
+  text-align: left;
+  display: flex; flex-direction: column; gap: 4px;
+  width: 100%;
+  box-shadow: var(--shadow);
+}
+.phase-card-title {
+  font-family: var(--serif);
+  font-size: 16px;
+  color: var(--text-dark);
+  font-weight: 600;
+  line-height: 1.3;
+}
+.phase-card-teaser {
+  font-size: 13px;
+  color: var(--text-medium);
+  line-height: 1.45;
+}
+.phase-card-more {
+  font-size: 12px;
+  color: var(--accent-dark);
+  font-family: var(--serif);
+  font-style: italic;
+  margin-top: 2px;
+}
+
+/* Dettaglio fase (dentro sheet) */
+.phase-detail { display: flex; flex-direction: column; }
+.phase-section-label {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 13px;
+  color: var(--accent-dark);
+  margin: 16px 0 5px;
+  letter-spacing: 0.01em;
+}
+.phase-section-label:first-child { margin-top: 0; }
+.phase-section-body {
+  font-size: 14.5px;
+  color: var(--text-dark);
+  line-height: 1.6;
+}
+.phase-list {
+  margin: 4px 0 0;
+  padding-left: 20px;
+}
+.phase-list li {
+  font-size: 14.5px;
+  color: var(--text-dark);
+  line-height: 1.55;
+  margin-bottom: 8px;
+}
+.phase-flag {
+  margin-top: 18px;
+  background: var(--alert-bg);
+  color: var(--alert-text);
+  border-radius: 12px;
+  padding: 12px 14px;
+  font-size: 13.5px;
+  line-height: 1.55;
+}
+
+/* Sezione tracker secondaria: più piccola e discreta */
+.quick-grid-secondary .quick-btn {
+  padding: 11px 6px;
+  min-height: 64px;
+}
+.quick-grid-secondary .quick-ico { font-size: 20px; }

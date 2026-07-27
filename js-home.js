@@ -72,43 +72,21 @@ function renderHome() {
 
   const infantMode = isInfantChild(child);
 
-  // ULTIMO EVENTO IMPORTANTE (poppata / cambio / sonno) — solo per bimbi piccoli
-  if (infantMode) {
-    const lastFeed = lastEventOfKind(child.id, 'feed');
-    const lastDiaper = lastEventOfKind(child.id, 'diaper');
-    const lastSleep = lastEventOfKind(child.id, 'sleep');
-    const anyLast = [lastFeed, lastDiaper, lastSleep].filter(Boolean);
-    if (anyLast.length > 0) {
-      html += `<div class="card-eyebrow eb-spaced">le ultime cose</div>`;
-      html += `<div class="last-events">`;
-      if (lastFeed) html += renderLastCard('poppata', lastFeed, describeFeed(lastFeed));
-      if (lastDiaper) html += renderLastCard('cambio', lastDiaper, describeDiaper(lastDiaper));
-      if (lastSleep) html += renderLastCard('sonno', lastSleep, describeSleep(lastSleep));
-      html += `</div>`;
-    }
+  // IN QUESTO PERIODO — sezione primaria: cosa aspettarti, perché, cosa fare
+  const currentPhases = (typeof getCurrentPhases === 'function') ? getCurrentPhases(child) : [];
+  html += `<div class="card-eyebrow eb-spaced">in questo periodo</div>`;
+  if (currentPhases.length > 0) {
+    html += `<div class="phase-list-wrap">`;
+    currentPhases.forEach(p => { html += renderPhaseTeaser(p); });
+    html += `</div>`;
   } else {
-    // Per bimbi più grandi: mostro solo l'ultima misura di crescita e l'ultima nota, se ci sono
-    const lastGrowth = lastEventOfKind(child.id, 'growth');
-    const lastNote = lastEventOfKind(child.id, 'note');
-    const anyLast = [lastGrowth, lastNote].filter(Boolean);
-    if (anyLast.length > 0) {
-      html += `<div class="card-eyebrow eb-spaced">le ultime cose</div>`;
-      html += `<div class="last-events">`;
-      if (lastGrowth) {
-        const parts = [];
-        if (lastGrowth.data?.weight_kg) parts.push(`${lastGrowth.data.weight_kg} kg`);
-        if (lastGrowth.data?.height_cm) parts.push(`${lastGrowth.data.height_cm} cm`);
-        html += renderLastCard('crescita', lastGrowth, parts.join(' · ') || 'misurazione registrata');
-      }
-      if (lastNote) html += renderLastCard('nota', lastNote, (lastNote.data?.text || '').slice(0, 80));
-      html += `</div>`;
-    }
+    html += `<div class="empty-card"><div class="empty-text">I contenuti su questa fascia d'età arriveranno presto.</div></div>`;
   }
 
-  // SHORTCUT — set diverso in base all'età
+  // REGISTRA — sezione secondaria, di supporto
   html += `<div class="card-eyebrow eb-spaced">registra rapidamente</div>`;
   if (infantMode) {
-    html += `<div class="quick-grid">
+    html += `<div class="quick-grid quick-grid-secondary">
       <button class="quick-btn" onclick="openQuickFeed()"><span class="quick-ico">🍼</span><span>Poppata</span></button>
       <button class="quick-btn" onclick="openQuickSleep()"><span class="quick-ico">💤</span><span>Sonno</span></button>
       <button class="quick-btn" onclick="openQuickDiaper()"><span class="quick-ico">👶</span><span>Cambio</span></button>
@@ -117,7 +95,7 @@ function renderHome() {
       <button class="quick-btn" onclick="openQuickNote()"><span class="quick-ico">📝</span><span>Nota</span></button>
     </div>`;
   } else {
-    html += `<div class="quick-grid quick-grid-3">
+    html += `<div class="quick-grid quick-grid-3 quick-grid-secondary">
       <button class="quick-btn" onclick="openQuickGrowth()"><span class="quick-ico">📏</span><span>Crescita</span></button>
       <button class="quick-btn" onclick="openQuickTemp()"><span class="quick-ico">🌡️</span><span>Febbre</span></button>
       <button class="quick-btn" onclick="openQuickNote()"><span class="quick-ico">📝</span><span>Nota</span></button>
