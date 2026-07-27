@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="bg5" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#2C3E50"/>
+      <stop offset="100%" stop-color="#1A2530"/>
+    </linearGradient>
+  </defs>
+  <rect width="1024" height="1024" rx="232" fill="url(#bg5)"/>
+  <!-- Due cerchi in alto a sinistra come "firma" -->
+  <circle cx="180" cy="220" r="34" fill="none" stroke="#FBF7F2" stroke-width="8"/>
+  <circle cx="248" cy="220" r="34" fill="none" stroke="#D4A24C" stroke-width="8"/>
+  <text x="512" y="680" font-family="Georgia, serif" font-size="380" font-weight="400" text-anchor="middle" fill="#FBF7F2" letter-spacing="-8">kin</text>
+</svg>

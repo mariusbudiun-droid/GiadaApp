@@ -1,0 +1,52 @@
+/* KIN · Themes */
+
+:root {
+  /* Serif per titoli e testi caldi */
+  --serif: 'Georgia', 'Cambria', 'Times New Roman', serif;
+  /* Sans per UI */
+  --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  /* Mono per numeri */
+  --mono: 'SF Mono', 'Menlo', 'Consolas', ui-monospace, monospace;
+}
+
+/* ---------- LIGHT ---------- */
+.theme-light {
+  --bg: #FBF7F2;              /* bianco caldo */
+  --paper: #F4EEE5;           /* paper chiaro */
+  --surface: #FFFFFF;         /* card */
+  --border: #E4DBCE;
+
+  --text-dark: #2C3E50;       /* blu notte */
+  --text-medium: #5A6B7C;
+  --text-light: #98A5B2;
+
+  --accent: #D4A24C;          /* oro */
+  --accent-dark: #A87A2E;     /* oro scuro */
+  --accent-soft: #F5EAD2;     /* oro chiaro */
+
+  --alert-text: #A0311E;
+  --alert-bg: #FAE4DE;
+
+  --shadow: 0 2px 8px rgba(44, 62, 80, 0.06);
+}
+
+/* ---------- DARK ---------- */
+.theme-dark {
+  --bg: #171F2A;              /* blu notte scuro */
+  --paper: #1F2836;
+  --surface: #253141;
+  --border: #333F52;
+
+  --text-dark: #F0EBE1;
+  --text-medium: #B6BCC7;
+  --text-light: #7A8494;
+
+  --accent: #D4A24C;
+  --accent-dark: #E5B770;
+  --accent-soft: #3D3423;
+
+  --alert-text: #F4A090;
+  --alert-bg: #4A2822;
+
+  --shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
+}
