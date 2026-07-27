@@ -27,6 +27,20 @@ const PHASES = [
     flag: 'Se dopo 2 settimane non ha ripreso il peso della nascita, parlane con il pediatra.'
   },
   {
+    id: 'inf_tummy_time',
+    ageMinDays: 0, ageMaxDays: 180,
+    title: 'Tempo a pancia in giù (tummy time)',
+    whatToExpect: 'Fin dai primissimi giorni è utile farlo stare un po\' a pancia in giù, da sveglio e sotto supervisione. All\'inizio durerà pochi istanti prima che protesti: è normale, non serve forzare.',
+    why: 'Rinforza i muscoli di collo, spalle e schiena che gli serviranno per sollevare la testa, poi il petto, e più avanti girarsi e gattonare. Aiuta anche a prevenire punti piatti sulla nuca dovuti a stare troppo a lungo sdraiato sulla schiena.',
+    whatToDo: [
+      'Inizia da subito con sessioni brevissime: anche solo 1-2 minuti, 2-3 volte al giorno.',
+      'Fallo sempre da sveglio e con te vicino, mai per farlo addormentare in quella posizione.',
+      'Aumenta gradualmente la durata nelle settimane successive, seguendo quanto la tollera.',
+      'Se piange subito, va bene interrompere e riprovare più tardi: conta la costanza nel tempo, non la durata di ogni sessione.'
+    ],
+    duration: 'Va proposto fin dalla nascita e diventa via via più lungo, fino a quando lo farà spontaneamente giocando, di solito verso i 4-6 mesi.'
+  },
+  {
     id: 'inf_colic',
     ageMinDays: 14, ageMaxDays: 120,
     title: 'Il periodo del pianto serale',
@@ -53,17 +67,17 @@ const PHASES = [
     duration: 'Da qui in poi i periodi di veglia attiva e interazione aumentano gradualmente.'
   },
   {
-    id: 'inf_growth_tummy',
-    ageMinDays: 80, ageMaxDays: 180,
-    title: 'Scatto di crescita e tummy time',
-    whatToExpect: 'Intorno ai 3 mesi molti bambini attraversano uno scatto di crescita: per qualche giorno mangiano di più e dormono peggio. È anche il momento in cui il tempo a pancia in giù (tummy time) diventa importante per rinforzare collo e spalle.',
-    why: 'Gli scatti di crescita sono brevi periodi di sviluppo accelerato. Il tummy time costruisce la forza necessaria per sollevare la testa, poi il petto, e più avanti girarsi e gattonare.',
+    id: 'inf_growth_spurt',
+    ageMinDays: 75, ageMaxDays: 100,
+    title: 'Scatto di crescita',
+    whatToExpect: 'Intorno ai 3 mesi molti bambini attraversano uno scatto di crescita: per qualche giorno mangiano di più, si svegliano più spesso, e possono sembrare più agitati o insaziabili.',
+    why: 'Gli scatti di crescita sono brevi periodi di sviluppo accelerato, in cui il corpo richiede più energie per crescere più velocemente del solito.',
     whatToDo: [
-      'Fai tummy time da sveglio e sotto supervisione, qualche minuto più volte al giorno, aumentando gradualmente fino a 15-20 minuti totali.',
-      'Se piange subito, riduci il tempo e riprova più tardi: conta la costanza, non la durata di ogni sessione.',
-      'Durante gli scatti di crescita, asseconda la fame extra: è temporaneo.'
+      'Asseconda la fame extra: nei prossimi giorni può volere il seno o il biberon più spesso del solito.',
+      'Non è un segnale che il latte non basti: è temporaneo e passa da solo in pochi giorni.',
+      'Prova comunque a mantenere una routine di base per non perdere del tutto i punti fermi della giornata.'
     ],
-    duration: 'Lo scatto di crescita dura di solito pochi giorni; il tummy time va costruito gradualmente nei mesi successivi.'
+    duration: 'Dura tipicamente pochi giorni; può ripresentarsi ad altre età, spesso intorno alle 3 settimane, alle 6 settimane, ai 3 mesi e ai 6 mesi.'
   },
   {
     id: 'inf_weaning',
