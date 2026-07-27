@@ -12,6 +12,7 @@ function goTo(tab) {
   window.scrollTo({ top: 0, behavior: 'instant' });
   if (tab === 'home') renderHome();
   if (tab === 'tracking') renderTracking();
+  if (tab === 'salute') renderHealth();
   if (tab === 'diario') renderDiary();
   if (tab === 'altro') renderSettings();
 }

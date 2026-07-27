@@ -28,6 +28,11 @@
     <div id="trackingContent"></div>
   </section>
 
+  <!-- SALUTE -->
+  <section class="section" id="sec-salute">
+    <div id="healthContent"></div>
+  </section>
+
   <!-- DIARIO -->
   <section class="section" id="sec-diario">
     <div id="diaryContent"></div>
@@ -49,6 +54,10 @@
   <button class="tab" data-tab="tracking" onclick="goTo('tracking')" aria-label="Tracking">
     <svg class="tab-svg" viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="3" rx="1"/><rect x="3" y="11" width="14" height="3" rx="1"/><rect x="3" y="16" width="10" height="3" rx="1"/></svg>
     <span class="tab-label">Tracking</span>
+  </button>
+  <button class="tab" data-tab="salute" onclick="goTo('salute')" aria-label="Salute">
+    <svg class="tab-svg" viewBox="0 0 24 24"><path d="M12 21s-6.7-4.3-9.3-8.2C1 10 1.5 6.5 4.4 5 6.6 3.8 9 4.6 12 7.5c3-2.9 5.4-3.7 7.6-2.5 2.9 1.5 3.4 5 1.7 7.8C18.7 16.7 12 21 12 21z" opacity="0.15"/><path d="M4 12h3l2-4 3 8 2-5h4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <span class="tab-label">Salute</span>
   </button>
   <button class="tab" data-tab="diario" onclick="goTo('diario')" aria-label="Diario">
     <svg class="tab-svg" viewBox="0 0 24 24"><path d="M7 3h10a2 2 0 0 1 2 2v15.5a.5.5 0 0 1-.78.42L15 18.93l-2.78 1.83a.5.5 0 0 1-.55 0L8.78 18.93l-2.78 1.83a.5.5 0 0 1-.78-.42V5c0-1.1.9-2 2-2z"/></svg>
@@ -80,6 +89,10 @@
 <script src="js-sync.js"></script>
 <script src="js-welcome.js"></script>
 <script src="js-phases.js"></script>
+<script src="js-growth-data.js"></script>
+<script src="js-growth.js"></script>
+<script src="js-vaccines-data.js"></script>
+<script src="js-health.js"></script>
 <script src="js-home.js"></script>
 <script src="js-tracking.js"></script>
 <script src="js-diary.js"></script>
