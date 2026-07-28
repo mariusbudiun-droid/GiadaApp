@@ -32,6 +32,15 @@ function saveData() {
 
 function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,8); }
 
+/* Interpreta un input numerico scritto dall'utente accettando sia virgola
+   che punto come separatore decimale (l'italiano usa la virgola, ma i campi
+   type="text" con inputmode="decimal" non la convertono da soli). */
+function parseDecimalInput(raw) {
+  if (raw == null) return NaN;
+  const cleaned = String(raw).trim().replace(',', '.');
+  return parseFloat(cleaned);
+}
+
 /* ---------- DATE HELPERS ---------- */
 function dateOf(ts) {
   const d = new Date(ts);

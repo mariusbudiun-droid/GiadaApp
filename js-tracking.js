@@ -198,11 +198,11 @@ function renderGrowthForm(ex) {
   const d = ex?.data || {};
   return `
     <label class="ev-label">Peso (kg)</label>
-    <input type="number" id="gwWeight" class="ev-input" inputmode="decimal" step="0.01" min="0.5" max="150" value="${d.weight_kg || ''}" placeholder="es. 4.2">
+    <input type="text" id="gwWeight" class="ev-input" inputmode="decimal" value="${d.weight_kg != null ? String(d.weight_kg).replace('.', ',') : ''}" placeholder="es. 4,2">
     <label class="ev-label">Altezza/lunghezza (cm)</label>
-    <input type="number" id="gwHeight" class="ev-input" inputmode="decimal" step="0.1" min="20" max="220" value="${d.height_cm || ''}" placeholder="es. 55">
+    <input type="text" id="gwHeight" class="ev-input" inputmode="decimal" value="${d.height_cm != null ? String(d.height_cm).replace('.', ',') : ''}" placeholder="es. 55">
     <label class="ev-label">Circonferenza cranica (cm) <span class="ev-hint-inline">(opzionale)</span></label>
-    <input type="number" id="gwHead" class="ev-input" inputmode="decimal" step="0.1" min="20" max="80" value="${d.head_cm || ''}" placeholder="es. 36">
+    <input type="text" id="gwHead" class="ev-input" inputmode="decimal" value="${d.head_cm != null ? String(d.head_cm).replace('.', ',') : ''}" placeholder="es. 36">
     <div class="ev-hint">Puoi compilare solo alcuni campi.</div>
   `;
 }
@@ -212,7 +212,7 @@ function renderTempForm(ex) {
   const d = ex?.data || {};
   return `
     <label class="ev-label">Temperatura (°C)</label>
-    <input type="number" id="tpVal" class="ev-input" inputmode="decimal" step="0.1" min="30" max="45" value="${d.value_c || ''}" placeholder="es. 37.8">
+    <input type="text" id="tpVal" class="ev-input" inputmode="decimal" value="${d.value_c != null ? String(d.value_c).replace('.', ',') : ''}" placeholder="es. 37,8">
     <label class="ev-label">Come misurata</label>
     <div class="ev-choice">
       <button type="button" class="ev-choice-btn ${d.method==='axillary'?'selected':''}" data-m="axillary" onclick="setTempMethod('axillary')">Ascellare</button>
@@ -286,16 +286,16 @@ function saveEvent(kind) {
     if (!data.pee && !data.poop) { toast('Segna almeno pipì o cacca'); return; }
   }
   else if (kind === 'growth') {
-    const w = parseFloat(document.getElementById('gwWeight')?.value);
-    const h_ = parseFloat(document.getElementById('gwHeight')?.value);
-    const hd = parseFloat(document.getElementById('gwHead')?.value);
+    const w = parseDecimalInput(document.getElementById('gwWeight')?.value);
+    const h_ = parseDecimalInput(document.getElementById('gwHeight')?.value);
+    const hd = parseDecimalInput(document.getElementById('gwHead')?.value);
     if (!isNaN(w)) data.weight_kg = w;
     if (!isNaN(h_)) data.height_cm = h_;
     if (!isNaN(hd)) data.head_cm = hd;
     if (Object.keys(data).length === 0) { toast('Metti almeno un valore'); return; }
   }
   else if (kind === 'temperature') {
-    const v = parseFloat(document.getElementById('tpVal')?.value);
+    const v = parseDecimalInput(document.getElementById('tpVal')?.value);
     if (isNaN(v)) { toast('Manca il valore'); return; }
     data.value_c = v;
     data.method = document.getElementById('tpMethod').value;
