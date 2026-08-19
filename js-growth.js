@@ -5,11 +5,65 @@
 
 let currentGrowthMeasure = 'weight'; // 'weight' | 'height' | 'head'
 
+/* Confronta il percentile di peso e altezza più recenti: se sono entrambi
+   alti o entrambi bassi va tutto bene (bambino/a proporzionato/a, solo
+   "grande" o "piccolo/a" nel complesso). Se invece divergono parecchio
+   (es. peso molto sopra e altezza molto sotto, o viceversa), segnala con
+   una nota leggera — non allarmante, solo un promemoria per il pediatra. */
+function computeGrowthProportionNote(child, gender) {
+  const events = eventsForChild(child.id).filter(e => e.kind === 'growth');
+  const weightEvents = events.filter(e => e.data && e.data.weight_kg != null).sort((a,b) => b.ts - a.ts);
+  const heightEvents = events.filter(e => e.data && e.data.height_cm != null).sort((a,b) => b.ts - a.ts);
+
+  if (weightEvents.length === 0 && heightEvents.length === 0) return null;
+
+  const weightTable = getGrowthTable('weight', gender);
+  const heightTable = getGrowthTable('height', gender);
+
+  let weightPct = null, heightPct = null;
+  if (weightEvents.length > 0) {
+    const ev = weightEvents[0];
+    const age = ageOf(child.birth_date, ev.ts);
+    weightPct = percentileToNumber(estimatePercentile(weightTable, age.totalMonths, ev.data.weight_kg));
+  }
+  if (heightEvents.length > 0) {
+    const ev = heightEvents[0];
+    const age = ageOf(child.birth_date, ev.ts);
+    heightPct = percentileToNumber(estimatePercentile(heightTable, age.totalMonths, ev.data.height_cm));
+  }
+
+  // Entrambe le misure disponibili: confronto la divergenza
+  if (weightPct != null && heightPct != null) {
+    if (weightPct >= 85 && heightPct <= 25) {
+      return 'Il peso corre parecchio più avanti dell\'altezza in questo momento. Probabilmente è solo una fase — ma è un buon punto da toccare al prossimo controllo dal pediatra.';
+    }
+    if (heightPct >= 85 && weightPct <= 25) {
+      return 'L\'altezza corre parecchio più avanti del peso in questo momento. Spesso capita durante gli scatti di crescita — vale comunque la pena parlarne al prossimo controllo.';
+    }
+    return null; // proporzionato, anche se alto/basso nel complesso: nessuna nota
+  }
+
+  // Solo una misura disponibile: nota solo se è ai margini estremi della curva
+  const soloPct = weightPct != null ? weightPct : heightPct;
+  const soloLabel = weightPct != null ? 'peso' : 'altezza';
+  if (soloPct <= 3 || soloPct >= 97) {
+    return `Il valore più recente di ${soloLabel} è ai margini della curva OMS (fuori dal range 3°-97°). Non è detto sia un problema, ma è un buon argomento per il prossimo controllo.`;
+  }
+  return null;
+}
+
 function renderGrowthSection(child) {
   if (!child) return '';
   const gender = child.gender === 'F' ? 'F' : 'M'; // default M se non specificato/altro, solo per la curva di riferimento
 
-  let html = `<div class="growth-tabs">
+  let html = '';
+
+  const proportionNote = computeGrowthProportionNote(child, gender);
+  if (proportionNote) {
+    html += `<div class="growth-note-card">${escapeHtml(proportionNote)}</div>`;
+  }
+
+  html += `<div class="growth-tabs">
     <button class="growth-tab ${currentGrowthMeasure==='weight'?'active':''}" onclick="setGrowthMeasure('weight')">Peso</button>
     <button class="growth-tab ${currentGrowthMeasure==='height'?'active':''}" onclick="setGrowthMeasure('height')">Altezza</button>
     <button class="growth-tab ${currentGrowthMeasure==='head'?'active':''}" onclick="setGrowthMeasure('head')">Circonferenza cranica</button>

@@ -1,10 +1,7 @@
-/* KIN · Tracking (feed/sleep/diaper/growth/temperature/note) */
+/* KIN · Tracking (crescita/febbre/nota) */
 'use strict';
 
 /* ---------- OPEN FORMS FROM HOME SHORTCUT ---------- */
-function openQuickFeed(evId) { openEventForm('feed', evId); }
-function openQuickSleep(evId) { openEventForm('sleep', evId); }
-function openQuickDiaper(evId) { openEventForm('diaper', evId); }
 function openQuickGrowth(evId) { openEventForm('growth', evId); }
 function openQuickTemp(evId) { openEventForm('temperature', evId); }
 function openQuickNote(evId) { openEventForm('note', evId); }
@@ -22,9 +19,6 @@ function openEventForm(kind, evId) {
   }
 
   const kindLabels = {
-    feed: 'Poppata',
-    sleep: 'Sonno',
-    diaper: 'Cambio',
     growth: 'Misurazione',
     temperature: 'Febbre',
     note: 'Nota',
@@ -35,10 +29,7 @@ function openEventForm(kind, evId) {
 
   let html = '<div class="ev-form">';
 
-  if (kind === 'feed') html += renderFeedForm(existing);
-  else if (kind === 'sleep') html += renderSleepForm(existing);
-  else if (kind === 'diaper') html += renderDiaperForm(existing);
-  else if (kind === 'growth') html += renderGrowthForm(existing);
+  if (kind === 'growth') html += renderGrowthForm(existing);
   else if (kind === 'temperature') html += renderTempForm(existing);
   else if (kind === 'note') html += renderNoteForm(existing);
 
@@ -69,128 +60,6 @@ function openEventForm(kind, evId) {
   document.getElementById('sheetBody').innerHTML = html;
   document.getElementById('sheetOverlay').classList.add('open');
   document.getElementById('sheet').classList.add('open');
-}
-
-/* ---------- FEED ---------- */
-function renderFeedForm(ex) {
-  const d = ex?.data || {};
-  const type = d.type || 'breast';
-  const side = d.side || 'left';
-  const dur = d.duration_min || '';
-  const ml = d.ml || '';
-  const content = d.content || 'formula';
-
-  return `
-    <label class="ev-label">Tipo</label>
-    <div class="ev-choice">
-      <button type="button" class="ev-choice-btn ${type==='breast'?'selected':''}" data-t="breast" onclick="setFeedType('breast')">Seno</button>
-      <button type="button" class="ev-choice-btn ${type==='bottle'?'selected':''}" data-t="bottle" onclick="setFeedType('bottle')">Biberon</button>
-      <button type="button" class="ev-choice-btn ${type==='solid'?'selected':''}" data-t="solid" onclick="setFeedType('solid')">Solidi</button>
-    </div>
-    <input type="hidden" id="fedType" value="${type}">
-
-    <div id="fedBreastBox" class="${type==='breast'?'':'hidden'}">
-      <label class="ev-label">Da quale seno?</label>
-      <div class="ev-choice">
-        <button type="button" class="ev-choice-btn ${side==='left'?'selected':''}" data-s="left" onclick="setFeedSide('left')">Sinistro</button>
-        <button type="button" class="ev-choice-btn ${side==='right'?'selected':''}" data-s="right" onclick="setFeedSide('right')">Destro</button>
-        <button type="button" class="ev-choice-btn ${side==='both'?'selected':''}" data-s="both" onclick="setFeedSide('both')">Entrambi</button>
-      </div>
-      <input type="hidden" id="fedSide" value="${side}">
-      <label class="ev-label">Durata (minuti)</label>
-      <input type="number" id="fedDur" class="ev-input" inputmode="numeric" min="1" max="120" value="${dur}" placeholder="es. 15">
-    </div>
-
-    <div id="fedBottleBox" class="${type==='bottle'?'':'hidden'}">
-      <label class="ev-label">Quantità (ml)</label>
-      <input type="number" id="fedMl" class="ev-input" inputmode="numeric" min="1" max="500" value="${ml}" placeholder="es. 90">
-      <label class="ev-label">Cosa</label>
-      <div class="ev-choice">
-        <button type="button" class="ev-choice-btn ${content==='formula'?'selected':''}" data-c="formula" onclick="setFeedContent('formula')">Formula</button>
-        <button type="button" class="ev-choice-btn ${content==='breast_milk'?'selected':''}" data-c="breast_milk" onclick="setFeedContent('breast_milk')">Latte materno</button>
-        <button type="button" class="ev-choice-btn ${content==='other'?'selected':''}" data-c="other" onclick="setFeedContent('other')">Altro</button>
-      </div>
-      <input type="hidden" id="fedContent" value="${content}">
-    </div>
-
-    <div id="fedSolidBox" class="${type==='solid'?'':'hidden'}">
-      <label class="ev-label">Cosa ha mangiato</label>
-      <input type="text" id="fedWhat" class="ev-input" maxlength="200" value="${escapeAttr(d.what || '')}" placeholder="es. mela grattugiata">
-    </div>
-  `;
-}
-
-function setFeedType(t) {
-  document.getElementById('fedType').value = t;
-  document.querySelectorAll('.ev-choice-btn[data-t]').forEach(b => b.classList.toggle('selected', b.dataset.t === t));
-  document.getElementById('fedBreastBox').classList.toggle('hidden', t !== 'breast');
-  document.getElementById('fedBottleBox').classList.toggle('hidden', t !== 'bottle');
-  document.getElementById('fedSolidBox').classList.toggle('hidden', t !== 'solid');
-}
-function setFeedSide(s) {
-  document.getElementById('fedSide').value = s;
-  document.querySelectorAll('.ev-choice-btn[data-s]').forEach(b => b.classList.toggle('selected', b.dataset.s === s));
-}
-function setFeedContent(c) {
-  document.getElementById('fedContent').value = c;
-  document.querySelectorAll('.ev-choice-btn[data-c]').forEach(b => b.classList.toggle('selected', b.dataset.c === c));
-}
-
-/* ---------- SLEEP ---------- */
-function renderSleepForm(ex) {
-  const d = ex?.data || {};
-  const status = d.status || 'ended';
-  const dur = d.duration_min || '';
-  return `
-    <label class="ev-label">Stato</label>
-    <div class="ev-choice">
-      <button type="button" class="ev-choice-btn ${status==='ended'?'selected':''}" data-st="ended" onclick="setSleepStatus('ended')">Ha dormito</button>
-      <button type="button" class="ev-choice-btn ${status==='ongoing'?'selected':''}" data-st="ongoing" onclick="setSleepStatus('ongoing')">Sta dormendo ora</button>
-    </div>
-    <input type="hidden" id="slpStatus" value="${status}">
-    <div id="slpDurBox" class="${status==='ended'?'':'hidden'}">
-      <label class="ev-label">Durata (minuti)</label>
-      <input type="number" id="slpDur" class="ev-input" inputmode="numeric" min="1" max="1440" value="${dur}" placeholder="es. 45">
-      <div class="ev-hint">L'ora sopra rappresenta quando si è svegliato/a.</div>
-    </div>
-    <div id="slpOngoingHint" class="${status==='ongoing'?'':'hidden'}">
-      <div class="ev-hint" style="margin-top:8px">L'ora sopra rappresenta quando si è addormentato/a. Modifica dopo per registrare il risveglio.</div>
-    </div>
-  `;
-}
-function setSleepStatus(s) {
-  document.getElementById('slpStatus').value = s;
-  document.querySelectorAll('.ev-choice-btn[data-st]').forEach(b => b.classList.toggle('selected', b.dataset.st === s));
-  document.getElementById('slpDurBox').classList.toggle('hidden', s !== 'ended');
-  document.getElementById('slpOngoingHint').classList.toggle('hidden', s !== 'ongoing');
-}
-
-/* ---------- DIAPER ---------- */
-function renderDiaperForm(ex) {
-  const d = ex?.data || {};
-  return `
-    <label class="ev-label">Cosa c'era</label>
-    <div class="ev-choice checks">
-      <button type="button" class="ev-choice-btn ${d.pee?'selected':''}" id="dpPee" onclick="toggleDiaper('pee')">Pipì</button>
-      <button type="button" class="ev-choice-btn ${d.poop?'selected':''}" id="dpPoop" onclick="toggleDiaper('poop')">Cacca</button>
-    </div>
-    <input type="hidden" id="dpPeeV" value="${d.pee?'1':''}">
-    <input type="hidden" id="dpPoopV" value="${d.poop?'1':''}">
-    <div id="dpPoopColorBox" class="${d.poop?'':'hidden'}">
-      <label class="ev-label">Colore/consistenza (opzionale)</label>
-      <input type="text" id="dpColor" class="ev-input" maxlength="80" value="${escapeAttr(d.color || '')}" placeholder="es. gialla morbida">
-    </div>
-  `;
-}
-function toggleDiaper(what) {
-  const btn = document.getElementById('dp' + (what === 'pee' ? 'Pee' : 'Poop'));
-  const hidden = document.getElementById('dp' + (what === 'pee' ? 'Pee' : 'Poop') + 'V');
-  const nowSelected = !btn.classList.contains('selected');
-  btn.classList.toggle('selected', nowSelected);
-  hidden.value = nowSelected ? '1' : '';
-  if (what === 'poop') {
-    document.getElementById('dpPoopColorBox').classList.toggle('hidden', !nowSelected);
-  }
 }
 
 /* ---------- GROWTH ---------- */
@@ -252,40 +121,7 @@ function saveEvent(kind) {
 
   let data = {};
 
-  if (kind === 'feed') {
-    const type = document.getElementById('fedType').value;
-    data.type = type;
-    if (type === 'breast') {
-      data.side = document.getElementById('fedSide').value;
-      const dur = parseInt(document.getElementById('fedDur')?.value);
-      if (!isNaN(dur)) data.duration_min = dur;
-    } else if (type === 'bottle') {
-      const ml = parseInt(document.getElementById('fedMl')?.value);
-      if (!isNaN(ml)) data.ml = ml;
-      data.content = document.getElementById('fedContent').value;
-    } else if (type === 'solid') {
-      const what = (document.getElementById('fedWhat')?.value || '').trim();
-      if (what) data.what = what;
-    }
-  }
-  else if (kind === 'sleep') {
-    const st = document.getElementById('slpStatus').value;
-    data.status = st;
-    if (st === 'ended') {
-      const dur = parseInt(document.getElementById('slpDur')?.value);
-      if (!isNaN(dur)) data.duration_min = dur;
-    }
-  }
-  else if (kind === 'diaper') {
-    data.pee = document.getElementById('dpPeeV').value === '1';
-    data.poop = document.getElementById('dpPoopV').value === '1';
-    if (data.poop) {
-      const col = (document.getElementById('dpColor')?.value || '').trim();
-      if (col) data.color = col;
-    }
-    if (!data.pee && !data.poop) { toast('Segna almeno pipì o cacca'); return; }
-  }
-  else if (kind === 'growth') {
+  if (kind === 'growth') {
     const w = parseDecimalInput(document.getElementById('gwWeight')?.value);
     const h_ = parseDecimalInput(document.getElementById('gwHeight')?.value);
     const hd = parseDecimalInput(document.getElementById('gwHead')?.value);
@@ -367,23 +203,12 @@ function renderTracking() {
     <h1 class="hdr-title">${escapeHtml(child.name)}</h1>
   </div>`;
 
-  // Filtro tipi — diverso in base all'età
-  const infantMode = isInfantChild(child);
-  const kinds = infantMode
-    ? [
-        { key: 'all', label: 'Tutto' },
-        { key: 'feed', label: 'Poppate' },
-        { key: 'sleep', label: 'Sonno' },
-        { key: 'diaper', label: 'Cambi' },
-        { key: 'growth', label: 'Crescita' },
-        { key: 'temperature', label: 'Febbre' }
-      ]
-    : [
-        { key: 'all', label: 'Tutto' },
-        { key: 'growth', label: 'Crescita' },
-        { key: 'temperature', label: 'Febbre' },
-        { key: 'note', label: 'Note' }
-      ];
+  const kinds = [
+    { key: 'all', label: 'Tutto' },
+    { key: 'growth', label: 'Crescita' },
+    { key: 'temperature', label: 'Febbre' },
+    { key: 'note', label: 'Note' }
+  ];
   let filterKind = window.__trackingFilter || 'all';
   if (!kinds.some(k => k.key === filterKind)) {
     filterKind = 'all';
@@ -396,13 +221,12 @@ function renderTracking() {
   html += `</div>`;
 
   // Lista eventi ordinata desc
-  let list = eventsForChild(child.id).slice().sort((a,b) => b.ts - a.ts);
+  let list = eventsForChild(child.id).filter(e => e.kind === 'growth' || e.kind === 'temperature' || e.kind === 'note').sort((a,b) => b.ts - a.ts);
   if (filterKind !== 'all') list = list.filter(e => e.kind === filterKind);
 
   if (list.length === 0) {
     html += `<div class="empty-card"><div class="empty-text">Ancora niente da mostrare.</div></div>`;
   } else {
-    // raggruppa per data
     const byDay = {};
     list.forEach(e => {
       const k = dateOf(e.ts);
@@ -434,10 +258,7 @@ function setTrackingFilter(k) {
 function renderTrackingRow(e) {
   const time = fmtTime(e.ts);
   let icon = '📝', label = e.kind, desc = '';
-  if (e.kind === 'feed') { icon = '🍼'; label = 'Poppata'; desc = describeFeed(e); }
-  else if (e.kind === 'sleep') { icon = '💤'; label = 'Sonno'; desc = describeSleep(e); }
-  else if (e.kind === 'diaper') { icon = '👶'; label = 'Cambio'; desc = describeDiaper(e); }
-  else if (e.kind === 'growth') {
+  if (e.kind === 'growth') {
     icon = '📏'; label = 'Crescita';
     const parts = [];
     if (e.data?.weight_kg) parts.push(`${e.data.weight_kg} kg`);

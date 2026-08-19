@@ -155,3 +155,11 @@ function getGrowthTable(measureType, gender) {
   if (measureType === 'head') return isGirl ? WHO_HEAD_GIRLS : WHO_HEAD_BOYS;
   return WHO_WEIGHT_BOYS;
 }
+
+/* Converte la stringa percentile ('<3', '>97', '62'...) in un numero comparabile 0-100 */
+function percentileToNumber(pctStr) {
+  if (pctStr === '<3') return 1;
+  if (pctStr === '>97') return 99;
+  const n = parseInt(pctStr);
+  return isNaN(n) ? 50 : n;
+}

@@ -4,16 +4,6 @@
 let currentAgeMode = 'ymdw';   // 'ymdw' | 'mwd' | 'wd' | 'd'
 let currentAgeShowCorrected = false;
 
-/* Sotto questa soglia mostriamo il tracking da neonato/bimbo piccolo
-   (poppate, sonno, cambi). Sopra, quello non ha più senso: restano
-   crescita, febbre, nota (e in futuro le milestone). */
-const INFANT_MAX_MONTHS = 36;
-
-function isInfantChild(child) {
-  const age = ageOf(child.birth_date);
-  return age.totalMonths < INFANT_MAX_MONTHS;
-}
-
 /* Anniversario automatico: rileva se oggi è esattamente un mese o un anno
    di vita (0 settimane e 0 giorni di resto oltre il mese/anno pieno). */
 function checkAnniversaryToday(child) {
@@ -100,8 +90,6 @@ function renderHome() {
     <div class="age-birth-hint">Nato/a il ${fmtDateLong(parseDateStr(child.birth_date))}</div>
   </div>`;
 
-  const infantMode = isInfantChild(child);
-
   // IN QUESTO PERIODO — sezione primaria: cosa aspettarti, perché, cosa fare
   const currentPhases = (typeof getCurrentPhases === 'function') ? getCurrentPhases(child) : [];
   html += `<div class="card-eyebrow eb-spaced">in questo periodo</div>`;
@@ -115,22 +103,11 @@ function renderHome() {
 
   // REGISTRA — sezione secondaria, di supporto
   html += `<div class="card-eyebrow eb-spaced">registra rapidamente</div>`;
-  if (infantMode) {
-    html += `<div class="quick-grid quick-grid-secondary">
-      <button class="quick-btn" onclick="openQuickFeed()"><span class="quick-ico">🍼</span><span>Poppata</span></button>
-      <button class="quick-btn" onclick="openQuickSleep()"><span class="quick-ico">💤</span><span>Sonno</span></button>
-      <button class="quick-btn" onclick="openQuickDiaper()"><span class="quick-ico">👶</span><span>Cambio</span></button>
-      <button class="quick-btn" onclick="openQuickGrowth()"><span class="quick-ico">📏</span><span>Peso</span></button>
-      <button class="quick-btn" onclick="openQuickTemp()"><span class="quick-ico">🌡️</span><span>Febbre</span></button>
-      <button class="quick-btn" onclick="openQuickNote()"><span class="quick-ico">📝</span><span>Nota</span></button>
-    </div>`;
-  } else {
-    html += `<div class="quick-grid quick-grid-3 quick-grid-secondary">
-      <button class="quick-btn" onclick="openQuickGrowth()"><span class="quick-ico">📏</span><span>Crescita</span></button>
-      <button class="quick-btn" onclick="openQuickTemp()"><span class="quick-ico">🌡️</span><span>Febbre</span></button>
-      <button class="quick-btn" onclick="openQuickNote()"><span class="quick-ico">📝</span><span>Nota</span></button>
-    </div>`;
-  }
+  html += `<div class="quick-grid quick-grid-3 quick-grid-secondary">
+    <button class="quick-btn" onclick="openQuickGrowth()"><span class="quick-ico">📏</span><span>Crescita</span></button>
+    <button class="quick-btn" onclick="openQuickTemp()"><span class="quick-ico">🌡️</span><span>Febbre</span></button>
+    <button class="quick-btn" onclick="openQuickNote()"><span class="quick-ico">📝</span><span>Nota</span></button>
+  </div>`;
 
   c.innerHTML = html;
 }
@@ -195,59 +172,4 @@ function setAgeMode(m) {
 function setCorrectedMode(v) {
   currentAgeShowCorrected = v;
   renderHome();
-}
-
-/* ---------- LAST EVENT CARDS ---------- */
-function renderLastCard(label, ev, description) {
-  const now = Date.now();
-  const diff = now - ev.ts;
-  let ago = '';
-  const mins = Math.floor(diff / 60000);
-  if (mins < 60) ago = mins <= 0 ? 'adesso' : `${mins} min fa`;
-  else if (mins < 60*24) ago = `${Math.floor(mins/60)}h ${mins%60}m fa`;
-  else ago = `${Math.floor(mins/60/24)}g fa`;
-
-  return `<div class="last-card">
-    <div class="last-card-head">
-      <span class="last-card-label">${label}</span>
-      <span class="last-card-when">${ago}</span>
-    </div>
-    <div class="last-card-desc">${description}</div>
-  </div>`;
-}
-
-function describeFeed(ev) {
-  const d = ev.data || {};
-  if (d.type === 'breast') {
-    const side = d.side === 'both' ? 'entrambi' : (d.side === 'left' ? 'sx' : (d.side === 'right' ? 'dx' : ''));
-    const dur = d.duration_min ? ` · ${d.duration_min} min` : '';
-    return `Allattamento${side ? ' ' + side : ''}${dur}`;
-  }
-  if (d.type === 'bottle') {
-    return `Biberon${d.ml ? ' ' + d.ml + ' ml' : ''}${d.content ? ' · ' + d.content : ''}`;
-  }
-  if (d.type === 'solid') {
-    return `Solidi${d.what ? ' · ' + d.what : ''}`;
-  }
-  return 'Poppata';
-}
-function describeDiaper(ev) {
-  const d = ev.data || {};
-  const bits = [];
-  if (d.pee) bits.push('pipì');
-  if (d.poop) bits.push('cacca');
-  if (d.color) bits.push(d.color);
-  return bits.length ? bits.join(' · ') : 'Cambio';
-}
-function describeSleep(ev) {
-  const d = ev.data || {};
-  if (d.duration_min) {
-    const h = Math.floor(d.duration_min / 60);
-    const m = d.duration_min % 60;
-    if (h > 0 && m > 0) return `Dormito ${h}h ${m}min`;
-    if (h > 0) return `Dormito ${h}h`;
-    return `Dormito ${m} min`;
-  }
-  if (d.status === 'ongoing') return 'Sta dormendo…';
-  return 'Sonno registrato';
 }
