@@ -151,7 +151,17 @@ async function syncDeleteChild(childId) {
 }
 
 /* ---------- PUSH EVENT ---------- */
+/* Un pull partito prima di una modifica locale può arrivare dopo e riportare
+   indietro lo stato (es. un sonno appena avviato che "sparisce" per qualche
+   secondo). Per questo gli eventi toccati da poco restano "fissati" in locale
+   per una breve finestra di grazia. */
+const SYNC_GRACE_MS = 20000;
+const SYNC_RECENT = {};    // id -> { ev, at }
+const SYNC_DELETED = {};   // id -> at
+
 async function syncPushEvent(ev) {
+  SYNC_RECENT[ev.id] = { ev, at: Date.now() };
+  delete SYNC_DELETED[ev.id];
   if (!SYNC.householdId) return;
   const body = {
     child_id: ev.child_id,
@@ -169,15 +179,19 @@ async function syncPushEvent(ev) {
       prefer: 'resolution=merge-duplicates,return=minimal'
     });
   } catch(e) { console.warn('push event', e); }
+  if (SYNC_RECENT[ev.id]) SYNC_RECENT[ev.id].at = Date.now();
 }
 
 async function syncDeleteEvent(childId, localId) {
+  SYNC_DELETED[localId] = Date.now();
+  delete SYNC_RECENT[localId];
   if (!SYNC.householdId) return;
   try {
     await supaReq('kin_events?child_id=eq.' + childId + '&local_id=eq.' + encodeURIComponent(localId), {
       method: 'DELETE', prefer: 'return=minimal'
     });
   } catch(e) { console.warn('delete event', e); }
+  SYNC_DELETED[localId] = Date.now();
 }
 
 /* ---------- PULL ---------- */
@@ -204,7 +218,7 @@ async function syncPullAll() {
       color: c.color || undefined,
       ord: c.ord || 0
     }));
-    DATA.events = (events || []).map(e => ({
+    let merged = (events || []).map(e => ({
       id: e.local_id,
       child_id: e.child_id,
       kind: e.kind,
@@ -212,12 +226,23 @@ async function syncPullAll() {
       data: e.data || {},
       note: e.note || undefined
     }));
+    const nowMs = Date.now();
+    merged = merged.filter(e => !(SYNC_DELETED[e.id] && nowMs - SYNC_DELETED[e.id] < SYNC_GRACE_MS));
+    Object.keys(SYNC_RECENT).forEach(id => {
+      const r = SYNC_RECENT[id];
+      if (nowMs - r.at > SYNC_GRACE_MS) { delete SYNC_RECENT[id]; return; }
+      const i = merged.findIndex(e => e.id === id);
+      if (i >= 0) merged[i] = r.ev; else merged.push(r.ev);
+    });
+    Object.keys(SYNC_DELETED).forEach(id => { if (nowMs - SYNC_DELETED[id] > SYNC_GRACE_MS) delete SYNC_DELETED[id]; });
+    DATA.events = merged;
     saveData();
 
     // Refresh UI
     try { if (typeof renderHome === 'function') renderHome(); } catch(_){}
     try { if (typeof renderTracking === 'function') renderTracking(); } catch(_){}
     try { if (typeof renderDiary === 'function') renderDiary(); } catch(_){}
+    try { if (typeof renderSleepPageIfActive === 'function') renderSleepPageIfActive(); } catch(_){}
   } catch(e) {
     console.warn('pull', e);
   } finally {

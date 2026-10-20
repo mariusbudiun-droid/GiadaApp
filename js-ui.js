@@ -7,10 +7,11 @@ function goTo(tab) {
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   const sec = document.getElementById('sec-' + tab);
   if (sec) sec.classList.add('active');
-  const tabBtn = document.querySelector(`.tab[data-tab="${tab}"]`);
+  const tabBtn = document.querySelector(`.tab[data-tab="${tab === 'sonno' ? 'home' : tab}"]`);
   if (tabBtn) tabBtn.classList.add('active');
   window.scrollTo({ top: 0, behavior: 'instant' });
   if (tab === 'home') renderHome();
+  if (tab === 'sonno') renderSleepPage();
   if (tab === 'tracking') renderTracking();
   if (tab === 'salute') renderHealth();
   if (tab === 'diario') renderDiary();

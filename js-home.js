@@ -90,6 +90,11 @@ function renderHome() {
     <div class="age-birth-hint">Nato/a il ${fmtDateLong(parseDateStr(child.birth_date))}</div>
   </div>`;
 
+  // SONNO — per i più piccoli (fino a 3 anni)
+  if (typeof sleepEligible === 'function' && sleepEligible(child)) {
+    html += `<div class="card-eyebrow">sonno</div>` + renderSleepCard(child, false);
+  }
+
   // IN QUESTO PERIODO — sezione primaria: cosa aspettarti, perché, cosa fare
   const currentPhases = (typeof getCurrentPhases === 'function') ? getCurrentPhases(child) : [];
   html += `<div class="card-eyebrow eb-spaced">in questo periodo</div>`;
@@ -99,6 +104,16 @@ function renderHome() {
     html += `</div>`;
   } else {
     html += `<div class="empty-card"><div class="empty-text">I contenuti su questa fascia d'età arriveranno presto.</div></div>`;
+  }
+
+  // SONNO (senza registro) — per i bambini più grandi: solo schede di contenuto
+  if (typeof sleepEligible === 'function' && !sleepEligible(child) && typeof getCurrentPhases === 'function') {
+    const sleepPhases = getCurrentPhases(child, 'sleep');
+    if (sleepPhases.length > 0) {
+      html += `<div class="card-eyebrow eb-spaced">sonno</div><div class="phase-list-wrap">`;
+      sleepPhases.forEach(p => { html += renderPhaseTeaser(p); });
+      html += `</div>`;
+    }
   }
 
   // REGISTRA — sezione secondaria, di supporto
@@ -159,6 +174,9 @@ function switchChild(id) {
   }
   if (document.getElementById('sec-salute').classList.contains('active')) {
     if (typeof renderHealth === 'function') renderHealth();
+  }
+  if (document.getElementById('sec-sonno').classList.contains('active')) {
+    if (typeof renderSleepPage === 'function') renderSleepPage();
   }
   if (document.getElementById('sec-diario').classList.contains('active')) {
     if (typeof renderDiary === 'function') renderDiary();

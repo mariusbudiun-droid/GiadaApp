@@ -157,6 +157,88 @@ const PHASES = [
     ]
   },
 
+  /* ---- Sonno (topic: 'sleep') — mostrate nella pagina Sonno, non nella Home ---- */
+
+  {
+    id: 'inf_sleep_basics', topic: 'sleep',
+    ageMinDays: 0, ageMaxDays: 150,
+    title: 'Come dorme a questa età',
+    whatToExpect: 'Dorme tanto (le indicazioni più usate parlano di 14-17 ore su 24 nei primi mesi) ma a pezzi: cicli di circa 50 minuti, risvegli frequenti e pisolini di durata molto variabile, spesso corti. Verso i 2-3 mesi molti bambini iniziano ad allungare un po\' la notte, ma 1-3 risvegli restano normali. Se è nato prematuro, il suo sonno segue l\'età corretta, non quella anagrafica.',
+    why: 'I cicli del sonno dei neonati sono brevi e il sonno comincia spesso con una fase leggera e agitata (sonno attivo, o REM), in cui è facile che si svegli. Il ritmo giorno/notte si costruisce gradualmente nei primi mesi.',
+    whatToDo: [
+      'Segui i suoi segnali di stanchezza più dell\'orologio: sguardo fisso, occhi rossi, sbadigli, agitazione, pugni sugli occhi.',
+      'Usa le finestre di veglia dell\'app come guida di massima, non come regola: a questa età cambiano molto da un giorno all\'altro.',
+      'Di giorno luce naturale e rumori normali; di notte luce bassa, voce bassa e niente giochi: lo aiuta a distinguere il giorno dalla notte.',
+      'Una mini-routine breve e sempre uguale prima dei sonni (cambio, luce bassa, canzone, coccole) crea un\'associazione. Non serve rigidità, serve ripetizione.',
+      'Non confrontarlo con i bambini che «dormono tutta la notte»: a questa età non è la norma.'
+    ],
+    duration: 'Il sonno si consolida gradualmente tra i 3 e i 6 mesi. Anche dopo il primo anno, svegliarsi almeno una volta per notte è comune.',
+    activities: [
+      'Un bagnetto tiepido e un piccolo massaggio con le mani come inizio della routine serale, se lo gradisce.',
+      'La stessa ninna nanna (o la stessa frase sussurrata) prima di ogni sonno.',
+      'Dopo il risveglio del mattino, qualche minuto di luce naturale vicino alla finestra, insieme.'
+    ],
+    flag: 'Se è molto difficile svegliarlo per mangiare, se dorme quasi sempre e mangia poco, o se ha un respiro affannoso nel sonno, chiama il pediatra.'
+  },
+  {
+    id: 'inf_sleep_arms', topic: 'sleep',
+    ageMinDays: 0, ageMaxDays: 300,
+    title: 'Dorme solo in braccio o in fascia: la strada verso il lettino',
+    whatToExpect: 'Molti bambini dormono benissimo in braccio o in fascia e si svegliano appena vengono posati, spesso dopo pochi minuti. È molto comune e non significa che tu abbia sbagliato qualcosa.',
+    why: 'In braccio sente il tuo calore, il tuo battito, il contatto continuo e il movimento: tutto ciò che per lui è normale. Il lettino è l\'opposto: fermo, piatto, più freddo. In più, nei primi mesi il riflesso di Moro (la sensazione di «cadere») lo sveglia quando viene appoggiato, e se lo posi nel sonno leggero iniziale è più facile che si svegli.',
+    whatToDo: [
+      'Aspetta il sonno profondo prima di posarlo: di solito 15-20 minuti dopo l\'addormentamento, con braccia e mani molli e respiro lento e regolare. Non è garantito: per questo nell\'app segni ogni tentativo e vedi quando funziona di più per lui.',
+      'Posalo lentamente, tenendolo contro il tuo corpo fino all\'ultimo, e lascia una mano sul petto per 30-60 secondi.',
+      'Scegli un solo sonno al giorno per provare il lettino (di solito il primo del mattino o quello della sera, quando è più stanco) e lascia gli altri in braccio o in fascia, senza sensi di colpa.',
+      'A questa età tenerlo in braccio non lo «vizia»: ha bisogno di contatto. Se ti stanchi, alternatevi.',
+      'Sicurezza: se si addormenta in fascia o in braccio, tienilo d\'occhio con il viso libero e il mento staccato dal petto e, appena puoi, mettilo a pancia in su su una superficie piana e rigida. Se rischi di addormentarti tu, mai su divano o poltrona.'
+    ],
+    duration: 'Di solito migliora con la maturazione del sonno (verso i 4-6 mesi i cicli si legano meglio e il riflesso di Moro scompare), ma i tempi sono molto individuali: per alcuni ci vogliono più mesi.',
+    activities: [
+      'Gioco e tummy time sul lettino da sveglio e sotto supervisione, per farlo diventare un posto normale e non solo «quello dove ci si sveglia».',
+      'Canta la stessa canzone in braccio e poi vicino al lettino con la mano sul petto: il suono diventa un ponte tra i due posti.'
+    ],
+    flag: 'Se oltre a dormire solo in braccio fa fatica a mangiare, ha un respiro rumoroso o affannoso nel sonno, o sembra molto sofferente quando è sdraiato, parlane con il pediatra.'
+  },
+  {
+    id: 'inf_sleep_night_stir', topic: 'sleep',
+    ageMinDays: 0, ageMaxDays: 300,
+    title: 'Notte: risvegli e sonno agitato verso mattina',
+    whatToExpect: 'È normale che faccia 1-3 risvegli per notte e che nella parte finale il sonno diventi più agitato: si muove, grugnisce, fa smorfie, a volte sembra sveglio ma ha gli occhi chiusi.',
+    why: 'Nei neonati una parte molto grande del sonno è «attiva» (REM): movimenti, rumori e smorfie sono normali e non vogliono dire che sia sveglio o che stia male. Man mano che la notte avanza il sonno si fa più leggero, e fame o pannolino bagnato lo svegliano più facilmente.',
+    whatToDo: [
+      'Aspetta 1-2 minuti prima di intervenire sui rumori: spesso si riaddormenta da solo.',
+      'Se si sveglia davvero, tieni tutto «noioso»: luce bassissima, voce bassa, niente giochi, poi riprova a farlo riaddormentare.',
+      'Segna con un tocco i risvegli brevi: dopo qualche notte vedi a che ora capitano e se si concentrano dopo le 4.',
+      'Controlla le cose semplici: fame (se è passato molto dall\'ultima poppata), pannolino, stanza né troppo calda né troppo fredda (circa 18-20 °C) e non troppo coperto.'
+    ],
+    duration: 'Cambia di continuo. Dopo i 4-6 mesi migliora per molti bambini, ma i periodi agitati tornano con scatti di crescita e nuove abilità.',
+    activities: [
+      'Prima di dormire: poppata o ciuccio, luce bassa e 5 minuti di coccole tranquille.',
+      'Di giorno tanta luce naturale e movimento, che aiutano il ritmo giorno-notte.'
+    ],
+    flag: 'Chiama il pediatra se il sonno agitato è accompagnato da pianto inconsolabile e diverso dal solito, vomito ripetuto, febbre, respiro affannoso o rumoroso, pause lunghe nel respiro, o se mangia poco.'
+  },
+  {
+    id: 'inf_sleep_4m', topic: 'sleep',
+    ageMinDays: 100, ageMaxDays: 210,
+    title: 'Verso i 4 mesi: il sonno cambia',
+    whatToExpect: 'Tra i 3 e i 5 mesi circa (età corretta) il sonno cambia struttura e diventa più simile a quello degli adulti, con fasi più leggere e più profonde. Per qualche settimana può svegliarsi più spesso, fare pisolini più corti e addormentarsi con più fatica. Si parla spesso di «regressione dei 4 mesi».',
+    why: 'Non è un passo indietro: è una maturazione che resta. Il cervello inizia a legare tra loro i cicli del sonno e ci passa un periodo di assestamento. Nello stesso periodo cresce la curiosità: sta imparando tante cose e può distrarsi dal dormire.',
+    whatToDo: [
+      'Tieni la routine semplice e costante.',
+      'Evita di cambiare molte cose insieme (stanza, orari, modo di addormentarlo) mentre il sonno è instabile.',
+      'Dagli di giorno occasioni per esercitare le nuove abilità (girarsi, afferrare), così non lo fa solo nel lettino di notte.',
+      'Le finestre di veglia si allungano: guarda la fascia aggiornata nell\'app.'
+    ],
+    duration: 'Di solito alcune settimane; poi il sonno si assesta in un modo nuovo, spesso con notti un po\' più lunghe.',
+    activities: [
+      'Giochi in cui afferra e passa oggetti da una mano all\'altra, per scaricare energia nuova.',
+      'Tempo a pancia in giù e rotolamenti sul tappeto nella veglia del pomeriggio.'
+    ],
+    flag: 'Se sta molto peggio di prima per più di qualche settimana, o compaiono febbre o altri sintomi, parlane con il pediatra.'
+  },
+
   /* ================= ALICE · 3-6 anni ================= */
 
   {
@@ -266,17 +348,66 @@ const PHASES = [
       'Un gioco da tavolo con regole e turni, per allenare attenzione e pazienza.',
       'Farle raccontare a voce alta una storia inventata da lei, anche solo per pochi minuti.'
     ]
+  },
+
+  /* ---- Sonno di Alice (topic: 'sleep') — sezione "sonno" in Home, senza registro ---- */
+
+  {
+    id: 'child_bedtime_routine', topic: 'sleep',
+    ageMinDays: 1095, ageMaxDays: 2555,
+    title: 'La routine della buonanotte',
+    whatToExpect: 'La sera diventa spesso un momento difficile: chiede ancora acqua, un\'altra storia, un altro bacio, si rialza. Molto spesso non è un semplice capriccio: è un modo per restare ancora un po\' con voi prima della separazione notturna. Per i bambini di 3-5 anni le indicazioni parlano di 10-13 ore di sonno su 24, pisolino compreso.',
+    why: 'A questa età l\'immaginazione è molto vivace (e con lei le paure del buio e dei sogni) e la voglia di fare da sola si scontra con il bisogno di sentirsi al sicuro. Una sequenza prevedibile le dice cosa succede dopo e le restituisce un po\' di controllo.',
+    whatToDo: [
+      'Scegli 3-4 passi sempre uguali e nello stesso ordine (per esempio pigiama, denti, due storie, luce spenta, bacio) e finisci sempre nella sua cameretta.',
+      'Tieni un orario di inizio abbastanza costante, anche nel weekend (scarto di circa un\'ora al massimo).',
+      'Spegni gli schermi almeno un\'ora prima di dormire: luce e contenuti eccitanti rendono più difficile addormentarsi.',
+      'Concordate prima le richieste «ultime» (per esempio due storie e un bicchiere d\'acqua) e dalle piccole scelte, come quale pigiama o quale libro: sentirsi coinvolta riduce la resistenza.',
+      'Prova un «gettone della buonanotte»: una richiesta in più a sera (acqua, un abbraccio) da usare quando vuole. Dopo averlo usato, niente più richieste.',
+      'Se ha cambiato qualcosa da poco (un fratellino, la scuola, una malattia) è normale che la sera diventi più faticosa per un periodo: più contatto di giorno aiuta.'
+    ],
+    duration: 'Con qualche giorno di costanza la routine di solito si assesta in 1-2 settimane. Le difficoltà possono tornare a periodi, con malattie, cambiamenti o novità in famiglia.',
+    activities: [
+      'Lasciale scegliere il libro e farsi «leggere» una pagina a modo suo.',
+      'Un momento di 2 minuti per raccontare o disegnare una cosa bella e una difficile della giornata.',
+      'Il respiro del pancione: mano sulla pancia che sale e scende, inspira come per annusare un fiore, espira come per spegnere una candelina.'
+    ],
+    flag: 'Se russa forte o fa pause nel respiro nel sonno, ha spesso incubi o terrori notturni, è molto stanca di giorno nonostante le ore dormite, o addormentarsi richiede sempre più di un\'ora per settimane, parlane con il pediatra.'
+  },
+  {
+    id: 'child_fall_asleep_alone', topic: 'sleep',
+    ageMinDays: 1095, ageMaxDays: 2555,
+    title: 'Dal «resta con me» al dormire da sola',
+    whatToExpect: 'Molti bambini dormono nella loro stanza ma riescono ad addormentarsi solo con un genitore accanto, e si agitano se esci. È molto comune e non significa che abbiate sbagliato qualcosa.',
+    why: 'Si è abituata ad addormentarsi con la tua presenza. Quando di notte si sveglia (è normale a ogni ciclo del sonno) e non ti trova, si agita e ti chiama. Con la fantasia e le paure di questa età, la tua vicinanza è ancora più rassicurante.',
+    whatToDo: [
+      'Spiegale il piano di giorno, in un momento sereno: «Da stasera io resto un po\' meno e ogni sera un pochino più lontano».',
+      'Ritiro graduale, un passo ogni 3-4 sere se è tranquilla: 1) resti nel letto con lei ma smetti di parlare e di toccarla; 2) ti siedi sul bordo del letto; 3) sedia accanto al letto; 4) sedia vicino alla porta; 5) sulla soglia, con la porta socchiusa; 6) fuori, passando a controllare.',
+      'Se si rialza, riportala a letto in silenzio, senza discutere, con poche parole sempre uguali («è ora di dormire, io sono qui vicino»). Sii noioso e costante.',
+      'Dalle un aiuto per fare da sola: un peluche o una copertina «di compagnia», una luce notturna soffusa, una storia o una musica registrata a volume basso.',
+      'Mettetevi d\'accordo in due: stessi passi, stesse parole, chiunque la metta a letto.',
+      'Se a metà notte viene da voi, riportala nel suo letto con lo stesso copione, senza farne un momento di gioco.'
+    ],
+    duration: 'Di solito si vedono i primi miglioramenti dopo 1-2 settimane di costanza e servono alcune settimane per arrivare alla porta. Possono esserci passi indietro (malattie, vacanze): si riparte dal passo precedente.',
+    activities: [
+      'Di giorno giocate a mettere a letto il peluche: la mamma o il papà è lei, e il peluche la saluta e poi dorme.',
+      'Un cartellone con adesivi per le sere in cui il passo è andato bene, con un piccolo premio a fine settimana.',
+      'Giochi del «torno subito»: esci dalla stanza per pochi secondi e rientra, allungando piano il tempo.'
+    ],
+    flag: 'Se la paura è molto intensa (panico, pianto inconsolabile ogni sera), compare anche di giorno o dopo un evento difficile, o se i problemi di sonno durano molti mesi nonostante la costanza, parlane con il pediatra.'
   }
 
 ];
 
+
 /* Restituisce le fasi attive per un figlio, in base alla sua età odierna in giorni.
    Più fasi possono essere attive insieme: è normale, lo sviluppo è continuo. */
-function getCurrentPhases(child) {
+function getCurrentPhases(child, topic) {
   const age = ageOf(child.birth_date);
   if (age.isNegative) return [];
   const days = age.totalDays;
   return PHASES
+    .filter(p => topic ? p.topic === topic : p.topic !== 'sleep')
     .filter(p => days >= p.ageMinDays && days <= p.ageMaxDays)
     .sort((a, b) => a.ageMinDays - b.ageMinDays);
 }
