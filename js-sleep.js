@@ -27,9 +27,10 @@ const SLEEP_PLACES = {
   arms:    { label: 'In braccio',     short: 'braccio', ico: '🤱' },
   carrier: { label: 'In fascia',      short: 'fascia',  ico: '🧣' },
   crib:    { label: 'Lettino / culla', short: 'lettino', ico: '🛏️' },
+  bed:     { label: 'Nel lettone',    short: 'lettone', ico: '🛌' },
   other:   { label: 'Altro',          short: 'altro',   ico: '✨' }
 };
-const SLEEP_PLACE_ORDER = ['arms', 'carrier', 'crib', 'other'];
+const SLEEP_PLACE_ORDER = ['arms', 'carrier', 'crib', 'bed', 'other'];
 
 /* Ore totali nelle 24h, per mesi (età corretta fino a 2 anni) */
 const SLEEP_TOTAL_REF = [
@@ -38,15 +39,16 @@ const SLEEP_TOTAL_REF = [
   { fromM: 12, toM: 36, min: 11, max: 14 }
 ];
 
-/* Finestre di veglia (minuti) e numero di pisolini tipico, per mesi */
+/* Finestre di veglia (minuti), numero di pisolini e durata tipica di un pisolino (napMin,
+   stima = sonno diurno indicativo / n. pisolini), per mesi */
 const WAKE_WINDOWS = [
-  { fromM: 0,  toM: 1,  min: 30,  max: 60,  naps: '4-6' },
-  { fromM: 1,  toM: 2,  min: 45,  max: 60,  naps: '4-5' },
-  { fromM: 2,  toM: 3,  min: 60,  max: 90,  naps: '4-5' },
-  { fromM: 3,  toM: 5,  min: 90,  max: 150, naps: '3-4' },
-  { fromM: 5,  toM: 8,  min: 120, max: 180, naps: '2-3' },
-  { fromM: 8,  toM: 11, min: 150, max: 210, naps: '2' },
-  { fromM: 11, toM: 13, min: 180, max: 240, naps: '2' }
+  { fromM: 0,  toM: 1,  min: 30,  max: 60,  naps: '4-6', napMin: 85 },
+  { fromM: 1,  toM: 2,  min: 45,  max: 60,  naps: '4-5', napMin: 80 },
+  { fromM: 2,  toM: 3,  min: 60,  max: 90,  naps: '4-5', napMin: 60 },
+  { fromM: 3,  toM: 5,  min: 90,  max: 150, naps: '3-4', napMin: 75 },
+  { fromM: 5,  toM: 8,  min: 120, max: 180, naps: '2-3', napMin: 95 },
+  { fromM: 8,  toM: 11, min: 150, max: 210, naps: '2', napMin: 105 },
+  { fromM: 11, toM: 13, min: 180, max: 240, naps: '2', napMin: 100 }
 ];
 
 const PUTDOWN_TIPS = [
@@ -198,6 +200,32 @@ function averageNapMin(childId, now) {
   return durs.length >= 3 ? durs.reduce((a, b) => a + b, 0) / durs.length : null;
 }
 
+/* I pisolini della giornata numerati in ordine: 1°, 2°, 3°... (giorno di calendario) */
+function napsByDayIndexed(childId) {
+  const naps = sleepSessions(childId).filter(e => sleepType(e) === 'nap');
+  const counters = {};
+  return naps.map(e => {
+    const k = dateOf(e.ts);
+    counters[k] = (counters[k] || 0) + 1;
+    return { ev: e, idx: counters[k] };
+  });
+}
+
+/* Durata media del 1°, 2°, 3°... pisolino negli ultimi 7 giorni */
+function napAveragesByIndex(childId, now) {
+  const from = now - 7 * DAY_MS;
+  const groups = {};
+  napsByDayIndexed(childId).forEach(r => {
+    const en = sleepEndTs(r.ev);
+    if (en == null || r.ev.ts < from) return;
+    const m = (en - r.ev.ts) / MIN_MS;
+    if (m >= 5 && m <= 240) (groups[r.idx] = groups[r.idx] || []).push(m);
+  });
+  return Object.keys(groups).map(Number).sort((a, b) => a - b).map(i => ({
+    idx: i, n: groups[i].length, avg: groups[i].reduce((a, b) => a + b, 0) / groups[i].length
+  }));
+}
+
 /* Previsione del prossimo sonno: fascia, non orario preciso */
 function predictNextSleep(child, now) {
   const months = sleepAgeMonths(child);
@@ -227,14 +255,14 @@ function napStatus(startTs, endTs, now) {
   if (now < startTs) {
     const m = Math.ceil((startTs - now) / MIN_MS);
     const hh = new Date(startTs).getHours();
-    const eve = (hh >= 19 || hh < 5) ? ' (probabilmente la nanna della sera)' : '';
-    return { cls: 'before', text: `Prossimo sonno tra circa ${fmtDur(m)} · ${fmtTime(startTs)}–${fmtTime(endTs)}${eve}` };
+    const eve = (hh >= 19) ? ' · probabilmente la nanna della sera' : '';
+    return { cls: 'before', big: 'tra ' + fmtDur(m), small: `Prossimo sonno · ${fmtTime(startTs)}-${fmtTime(endTs)}${eve}` };
   }
   if (now <= endTs) {
-    return { cls: 'open', text: `Finestra aperta fino alle ${fmtTime(endTs)}: buon momento per provare a farlo dormire` };
+    return { cls: 'open', big: 'È il momento', small: `Finestra aperta fino alle ${fmtTime(endTs)}: prova a farlo dormire` };
   }
   const late = Math.round((now - endTs) / MIN_MS);
-  return { cls: 'late', text: `Finestra superata da ${fmtDur(late)}: se è già agitato, prova subito a calmarlo e a farlo dormire` };
+  return { cls: 'late', big: 'oltre di ' + fmtDur(late), small: 'Finestra superata: se è già agitato, prova subito a calmarlo e a farlo dormire' };
 }
 
 /* ---------- AZIONI AL TAP ---------- */
@@ -296,9 +324,10 @@ function openPutdownSheet() {
   document.getElementById('sheetBody').innerHTML = `
     <div class="phase-section-body">Addormentato da <strong>${after} min</strong>. Dove lo posi?</div>
     ${hint ? `<div class="ev-hint" style="margin:8px 0 0">${escapeHtml(hint)}</div>` : ''}
-    <div class="sleep-places two" style="margin-top:14px">
+    <div class="sleep-places three" style="margin-top:14px">
       <button onclick="confirmPutdown('crib')"><span class="sp-ico">🛏️</span><span>Lettino / culla</span></button>
-      <button onclick="confirmPutdown('other')"><span class="sp-ico">✨</span><span>Altra superficie piana</span></button>
+      <button onclick="confirmPutdown('bed')"><span class="sp-ico">🛌</span><span>Lettone</span></button>
+      <button onclick="confirmPutdown('other')"><span class="sp-ico">✨</span><span>Altro</span></button>
     </div>
     <div class="ev-hint" style="margin-top:12px">L'esito lo capisco io: se dorme ancora dopo ${PUTDOWN_STAY_MIN} minuti vale come «resta giù», se si sveglia prima come «si è svegliato». Puoi correggerlo dopo.</div>
     <div class="phase-flag" style="margin-top:14px">Sicurezza: sempre a pancia in su, su superficie piana e rigida. Se si è addormentato in fascia o in braccio, tienilo d'occhio con il viso libero e il mento staccato dal petto. Se rischi di addormentarti tu, mai su divano o poltrona.</div>`;
@@ -342,7 +371,7 @@ function openPutdownEdit(id) {
       <label class="ev-label">Dopo quanti minuti dall'addormentamento</label>
       <input type="text" id="pdAfter" class="ev-input" inputmode="numeric" value="${pd.data.after_min != null ? pd.data.after_min : ''}">
       <label class="ev-label">Dove</label>
-      <div class="ev-choice">${chip('pdPlace', 'crib', '🛏️ Lettino', pd.data.place)}${chip('pdPlace', 'other', '✨ Altro', pd.data.place)}</div>
+      <div class="ev-choice">${chip('pdPlace', 'crib', '🛏️ Lettino', pd.data.place)}${chip('pdPlace', 'bed', '🛌 Lettone', pd.data.place)}${chip('pdPlace', 'other', '✨ Altro', pd.data.place)}</div>
       <label class="ev-label">Com'è andata</label>
       <div class="ev-choice">${chip('pdRes', 'auto', 'Automatico', res)}${chip('pdRes', 'stayed', 'Resta giù', res)}${chip('pdRes', 'woke', 'Si è svegliato', res)}</div>
       <input type="hidden" id="pdPlaceV" value="${pd.data.place || 'crib'}">
@@ -537,6 +566,53 @@ function deleteSleep(id) {
 
 /* ---------- RENDER: CARD (home e pagina sonno) ---------- */
 
+/* Durata "tipica" del pisolino in corso. In ordine di preferenza:
+   1) la media dei suoi pisolini nella STESSA posizione della giornata (1°, 2°, 3°...),
+      se ne ha almeno 3 negli ultimi 7 giorni
+   2) la media di tutti i suoi pisolini, se sono almeno 3
+   3) una stima dai riferimenti per età (indicativa) */
+function typicalNapMin(child, now, cur) {
+  const r5 = m => Math.max(5, Math.round(m / 5) * 5);
+  if (cur) {
+    const me = napsByDayIndexed(child.id).find(x => x.ev.id === cur.id);
+    if (me) {
+      const row = napAveragesByIndex(child.id, now).find(x => x.idx === me.idx);
+      if (row && row.n >= 3) return { min: r5(row.avg), kind: 'index', idx: me.idx };
+    }
+  }
+  const avg = averageNapMin(child.id, now);
+  if (avg) return { min: r5(avg), kind: 'all' };
+  const ww = wakeWindowFor(sleepAgeMonths(child));
+  return ww ? { min: ww.napMin, kind: 'ref' } : null;
+}
+
+function pctClamp(x) { return Math.max(0, Math.min(100, x)); }
+
+function dayBarModel(totalMin, ref, complete) {
+  const scale = ref.max + 2;                         // ore: un po' di margine oltre il massimo
+  const hours = totalMin / 60;
+  const verdict = complete ? sleepTotalVerdict(totalMin, ref) : null;
+  return {
+    fill: pctClamp(hours / scale * 100),
+    bandLeft: ref.min / scale * 100,
+    bandWidth: (ref.max - ref.min) / scale * 100,
+    verdict
+  };
+}
+
+function renderDayBar(child, now, ref) {
+  const tot = sleepTotals(child.id, now);
+  const m = dayBarModel(tot.total, ref, tot.complete);
+  return `<div class="sleep-day js-sleep-day" data-child="${child.id}" data-min="${ref.min}" data-max="${ref.max}">
+    <div class="sleep-day-head">
+      <span class="sd-lbl">Sonno nelle ultime 24 h</span>
+      <span class="sd-val"><strong class="js-day-val">${fmtDur(tot.total)}</strong> su ${ref.min}-${ref.max} h</span>
+    </div>
+    <div class="sbar"><i class="js-day-fill" style="width:${m.fill.toFixed(1)}%"></i><b class="sband" style="left:${m.bandLeft.toFixed(1)}%;width:${m.bandWidth.toFixed(1)}%"></b></div>
+    <div class="sd-note js-day-note ${m.verdict ? m.verdict.cls : ''}">${m.verdict ? m.verdict.text : 'Il confronto parte dopo un giorno intero di registrazioni'}</div>
+  </div>`;
+}
+
 function renderSleepCard(child, inPage) {
   const now = Date.now();
   const cur = currentSleep(child.id);
@@ -548,16 +624,33 @@ function renderSleepCard(child, inPage) {
     const place = SLEEP_PLACES[cur.data.place] || SLEEP_PLACES.other;
     const wakesN = (cur.data.wakes || []).length;
     const pd = latestPutdownForSleep(cur.id);
+    const isNap = sleepType(cur) === 'nap';
     h += `<div class="sleep-top">
-        <div class="sleep-state">😴 Dorme da <span class="js-sleep-tick" data-fmt="timer" data-since="${cur.ts}">${fmtElapsed(now - cur.ts)}</span></div>
+        <div class="sleep-state-lbl">${isNap ? '😴 Pisolino in corso' : '🌙 Notte in corso'}</div>
         <button class="sleep-edit" onclick="openSleepForm('${cur.id}')">modifica</button>
       </div>
-      <div class="sleep-sub">${place.ico} ${place.label} · dalle ${fmtTime(cur.ts)}${wakesN ? ` · ${wakesN} ${wakesN === 1 ? 'risveglio breve' : 'risvegli brevi'}` : ''}</div>`;
+      <div class="sleep-timer js-sleep-tick" data-fmt="timer" data-since="${cur.ts}">${fmtElapsed(now - cur.ts)}</div>`;
+
+    const typ = isNap ? typicalNapMin(child, now, cur) : null;
+    if (typ) {
+      const full = typ.min * MIN_MS;
+      const pct = pctClamp((now - cur.ts) / full * 100);
+      h += `<div class="sbar nap"><i class="js-nap-fill ${now - cur.ts >= full ? 'over' : ''}" data-since="${cur.ts}" data-full="${full}" style="width:${Math.max(2, pct).toFixed(1)}%"></i></div>
+        <div class="sbar-labels"><span>dalle ${fmtTime(cur.ts)}</span><span>${typ.kind === 'index' ? `media dei suoi ${typ.idx}° pisolini` : (typ.kind === 'all' ? 'media dei suoi pisolini' : 'pisolino tipico per l\'età')}: ~${fmtDur(typ.min)}</span></div>`;
+    } else {
+      h += `<div class="sbar-labels"><span>dalle ${fmtTime(cur.ts)}</span><span></span></div>`;
+    }
+
+    h += `<div class="sleep-chips">
+        <span class="chip">${place.ico} ${place.label}</span>
+        ${wakesN ? `<span class="chip">👁️ ${wakesN} ${wakesN === 1 ? 'risveglio breve' : 'risvegli brevi'}</span>` : ''}
+      </div>`;
     if (pd) {
       h += `<div class="sleep-sub">Posato alle ${fmtTime(pd.ts)} (dopo ${pd.data.after_min} min). Se si sveglia, tocca «Si è svegliato».</div>`;
     }
-    const avg = sleepType(cur) === 'nap' ? averageNapMin(child.id, now) : null;
-    if (avg) h += `<div class="sleep-sub">I pisolini recenti durano in media ${fmtDur(avg)}.</div>`;
+    if (cur.data.place === 'bed') {
+      h += `<div class="sleep-sub">Nel lettone: niente cuscini o coperte vicino a lui e, se puoi, rimettilo nel suo spazio appena possibile.</div>`;
+    }
     h += `<button class="sleep-main-btn wake" onclick="sleepWake()">☀️ Si è svegliato</button>
       <div class="sleep-actions">
         <button onclick="openPutdownSheet()">🛏️ L'ho posato</button>
@@ -565,15 +658,23 @@ function renderSleepCard(child, inPage) {
       </div>`;
   } else {
     const lastEnd = lastWakeTs(child.id);
-    h += `<div class="sleep-top"><div class="sleep-state">☀️ Sveglio${lastEnd ? ` da <span class="js-sleep-tick" data-fmt="dur" data-since="${lastEnd}">${fmtDur((now - lastEnd) / MIN_MS)}</span>` : ''}</div></div>`;
+    h += `<div class="sleep-top"><div class="sleep-state-lbl">☀️ Sveglio${lastEnd ? ` da <span class="js-sleep-tick" data-fmt="dur" data-since="${lastEnd}">${fmtDur((now - lastEnd) / MIN_MS)}</span>` : ''}</div></div>`;
 
     const pred = predictNextSleep(child, now);
     if (pred.kind === 'ok') {
       const st = napStatus(pred.start, pred.end, now);
-      h += `<div class="sleep-next ${st.cls} js-sleep-next" data-start="${pred.start}" data-end="${pred.end}">${escapeHtml(st.text)}</div>`;
+      const scale = pred.hi * 1.3 * MIN_MS;
+      const pct = pctClamp((now - pred.lastEnd) / scale * 100);
+      const bandL = pred.lo / (pred.hi * 1.3) * 100, bandW = (pred.hi - pred.lo) / (pred.hi * 1.3) * 100;
+      h += `<div class="sleep-next ${st.cls} js-sleep-next" data-start="${pred.start}" data-end="${pred.end}" data-since="${pred.lastEnd}" data-scale="${scale}">
+          <div class="sn-big js-sn-big">${escapeHtml(st.big)}</div>
+          <div class="sn-small js-sn-small">${escapeHtml(st.small)}</div>
+          <div class="sbar awake"><i class="js-awake-fill" style="width:${Math.max(2, pct).toFixed(1)}%"></i><b class="sband" style="left:${bandL.toFixed(1)}%;width:${bandW.toFixed(1)}%"></b></div>
+          <div class="sbar-labels"><span>risveglio ${fmtTime(pred.lastEnd)}</span><span>fascia ${pred.lo}-${pred.hi} min di veglia</span></div>
+        </div>`;
       h += `<div class="sleep-sub">${pred.personal
         ? `Fascia tarata sui suoi ultimi ${pred.n} pisolini.`
-        : `Fascia indicativa per questa età: veglia di ${pred.ww.min}-${pred.ww.max} min. Si affina da sola dopo qualche giorno di registrazioni.`}</div>`;
+        : 'Fascia indicativa per questa età. Si affina da sola dopo qualche giorno di registrazioni.'}</div>`;
     } else if (pred.kind === 'stale') {
       h += `<div class="sleep-sub">Ultimo risveglio registrato alle ${fmtTime(pred.lastEnd)}. Se ha dormito dopo, aggiungilo con «+ sonno».</div>`;
     } else if (pred.kind === 'nodata') {
@@ -586,16 +687,7 @@ function renderSleepCard(child, inPage) {
       </div>`;
   }
 
-  // Riga ore 24h
-  const tot = sleepTotals(child.id, now);
-  if (tot.total > 0) {
-    if (tot.complete) {
-      const v = sleepTotalVerdict(tot.total, ref);
-      h += `<div class="sleep-total">Ultime 24 h: <strong>${fmtDur(tot.total)}</strong> · indicativo ${ref.min}-${ref.max} h <span class="sleep-verdict ${v.cls}">${v.text}</span></div>`;
-    } else {
-      h += `<div class="sleep-total">Ultime 24 h: <strong>${fmtDur(tot.total)}</strong> · dopo un giorno intero di registrazioni li confronto con ${ref.min}-${ref.max} h</div>`;
-    }
-  }
+  h += renderDayBar(child, now, ref);
 
   if (!inPage) {
     h += `<button class="sleep-more" onclick="goTo('sonno')">Posamenti, orari e consigli ›</button>`;
@@ -643,6 +735,9 @@ function renderSleepPage() {
     </div>
     <div class="ev-hint" style="margin:6px 4px 0">Sono medie, non regole: l'età è quella corretta se è nato prematuro. Le finestre di veglia sono una guida di uso comune, non hanno una base scientifica forte.</div>`;
 
+  // Durata dei pisolini per posizione nella giornata
+  html += renderNapAveragesSection(child, now);
+
   // Posamenti
   html += renderPutdownSection(child, now);
 
@@ -661,14 +756,27 @@ function renderSleepPage() {
   html += renderSleepHistory(child, now);
 
   html += `<div class="phase-flag" style="margin-top:22px"><strong>Quando chiamare il pediatra —</strong> respiro affannoso o con pause lunghe, colorito pallido o bluastro, pianto inconsolabile e diverso dal solito, vomito ripetuto, difficoltà a svegliarlo per mangiare, febbre (sotto i 3 mesi anche 38 °C va valutata subito). Se non risponde o è bluastro, chiama il 112.</div>`;
-  html += `<div class="ev-hint" style="margin:10px 4px 0">Sicurezza del sonno (AAP): sempre a pancia in su, su superficie piana e rigida, senza cuscini o peluche. Se si addormenta in fascia o in braccio, spostalo appena puoi. Mai addormentarsi con lui su divano o poltrona.</div>`;
+  html += `<div class="ev-hint" style="margin:10px 4px 0">Sicurezza del sonno (AAP): sempre a pancia in su, su superficie piana e rigida, senza cuscini o peluche. Se si addormenta in fascia o in braccio, spostalo appena puoi. Mai addormentarsi con lui su divano o poltrona. Nel lettone l'AAP sconsiglia di dormire insieme nei primi mesi e nei nati prematuri: il rischio è più alto sotto i 4 mesi ed è molto più alto se un adulto ha bevuto alcol, preso farmaci che appesantiscono il sonno o fuma. La soluzione che l'AAP indica è tenere il suo spazio vicino al vostro letto (stanza condivisa, letto separato) per almeno 6 mesi.</div>`;
 
   c.innerHTML = html;
 }
 
+function renderNapAveragesSection(child, now) {
+  const rows = napAveragesByIndex(child.id, now).filter(r => r.n >= 2);
+  if (!rows.length) return '';
+  const max = Math.max(...rows.map(r => r.avg));
+  let h = `<div class="card-eyebrow eb-spaced">durata dei pisolini · ultimi 7 giorni</div><div class="sleep-panel"><div class="pd-table">`;
+  rows.forEach(r => {
+    h += `<div class="pd-row wide"><span class="pd-lbl">${r.idx}° · ${r.n} volte</span><span class="pd-bar"><i style="width:${Math.round(100 * r.avg / max)}%"></i></span><span class="pd-val">${fmtDur(r.avg)}</span></div>`;
+  });
+  h += `</div><div class="ev-hint">Il numero è la posizione nella giornata. Se un pisolino non viene segnato, quelli dopo si spostano: puoi recuperarlo con «+ sonno».</div></div>`;
+  return h;
+}
+
 function renderPutdownSection(child, now) {
   const pds = putdownsFor(child.id).map(p => ({ p, res: putdownResult(p, now) }));
-  const resolved = pds.filter(x => x.res === 'stayed' || x.res === 'woke');
+  const bedN = pds.filter(x => x.p.data.place === 'bed').length;
+  const resolved = pds.filter(x => (x.res === 'stayed' || x.res === 'woke') && x.p.data.place !== 'bed');
   const stayed = resolved.filter(x => x.res === 'stayed').length;
 
   let h = `<div class="card-eyebrow eb-spaced">posarlo senza svegliarlo</div><div class="sleep-panel">`;
@@ -707,6 +815,10 @@ function renderPutdownSection(child, now) {
     }
   }
 
+  if (bedN > 0) {
+    h += `<div class="ev-hint">I posamenti nel lettone (${bedN}) restano nell'elenco ma non entrano nelle percentuali, che servono a capire il lettino.</div>`;
+  }
+
   const recent = pds.slice(0, 6);
   if (recent.length) {
     h += `<div class="pd-list">`;
@@ -729,7 +841,7 @@ function renderPutdownSection(child, now) {
 
 function renderPlaceSection(child, now) {
   const from = now - 7 * DAY_MS;
-  const mins = { arms: 0, carrier: 0, crib: 0, other: 0 };
+  const mins = { arms: 0, carrier: 0, crib: 0, bed: 0, other: 0 };
   let total = 0;
   sleepSessions(child.id).forEach(e => {
     const s = Math.max(e.ts, from);
@@ -802,18 +914,49 @@ function refreshSleepViews() {
   renderSleepPageIfActive();
 }
 
-/* Aggiorna solo i testi (mai i bottoni: ridisegnarli mentre li tocchi fa perdere i tap) */
+/* Aggiorna solo testi e larghezze (mai i bottoni: ridisegnarli mentre li tocchi fa perdere i tap) */
+let _sleepTickN = 0;
+
+function updateNextBlock(el, now) {
+  const start = Number(el.dataset.start), end = Number(el.dataset.end);
+  const since = Number(el.dataset.since), scale = Number(el.dataset.scale);
+  const st = napStatus(start, end, now);
+  el.className = 'sleep-next ' + st.cls + ' js-sleep-next';
+  const big = el.querySelector('.js-sn-big'), small = el.querySelector('.js-sn-small'), fill = el.querySelector('.js-awake-fill');
+  if (big) big.textContent = st.big;
+  if (small) small.textContent = st.small;
+  if (fill) fill.style.width = Math.max(2, pctClamp((now - since) / scale * 100)).toFixed(1) + '%';
+}
+
+function updateDayBar(el, now) {
+  const child = getChild(el.dataset.child);
+  if (!child) return;
+  const ref = { min: Number(el.dataset.min), max: Number(el.dataset.max) };
+  const tot = sleepTotals(child.id, now);
+  const m = dayBarModel(tot.total, ref, tot.complete);
+  const val = el.querySelector('.js-day-val'), fill = el.querySelector('.js-day-fill'), note = el.querySelector('.js-day-note');
+  if (val) val.textContent = fmtDur(tot.total);
+  if (fill) fill.style.width = m.fill.toFixed(1) + '%';
+  if (note) {
+    note.textContent = m.verdict ? m.verdict.text : 'Il confronto parte dopo un giorno intero di registrazioni';
+    note.className = 'sd-note js-day-note ' + (m.verdict ? m.verdict.cls : '');
+  }
+}
+
 function sleepTick() {
   if (document.hidden) return;
   const now = Date.now();
+  _sleepTickN++;
   document.querySelectorAll('.js-sleep-tick').forEach(el => {
     const since = Number(el.dataset.since);
     el.textContent = el.dataset.fmt === 'timer' ? fmtElapsed(now - since) : fmtDur((now - since) / MIN_MS);
   });
-  document.querySelectorAll('.js-sleep-next').forEach(el => {
-    const st = napStatus(Number(el.dataset.start), Number(el.dataset.end), now);
-    el.textContent = st.text;
-    el.className = 'sleep-next ' + st.cls + ' js-sleep-next';
+  document.querySelectorAll('.js-sleep-next').forEach(el => updateNextBlock(el, now));
+  document.querySelectorAll('.js-nap-fill').forEach(el => {
+    const since = Number(el.dataset.since), full = Number(el.dataset.full);
+    el.style.width = Math.max(2, pctClamp((now - since) / full * 100)).toFixed(1) + '%';
+    el.classList.toggle('over', now - since >= full);
   });
+  if (_sleepTickN % 15 === 0) document.querySelectorAll('.js-sleep-day').forEach(el => updateDayBar(el, now));
 }
 setInterval(sleepTick, 1000);

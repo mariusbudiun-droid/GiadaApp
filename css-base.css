@@ -1306,12 +1306,6 @@ textarea.ev-input { resize: vertical; min-height: 60px; font-size: 15px; }
   border-color: var(--accent);
 }
 .sleep-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-.sleep-state {
-  font-family: var(--serif);
-  font-size: 20px; font-weight: 600;
-  color: var(--text-dark);
-}
-.sleep-state .js-sleep-tick { font-variant-numeric: tabular-nums; }
 .sleep-edit {
   background: transparent; border: 1px solid var(--border);
   color: var(--text-medium); border-radius: 8px;
@@ -1321,25 +1315,16 @@ textarea.ev-input { resize: vertical; min-height: 60px; font-size: 15px; }
   font-size: 13px; color: var(--text-medium);
   line-height: 1.5; margin-top: 6px;
 }
-.sleep-next {
-  margin-top: 10px;
-  padding: 10px 12px;
-  border-radius: 12px;
-  font-size: 14px; line-height: 1.45;
-  background: var(--paper);
-  color: var(--text-dark);
-}
-.sleep-next.open { background: var(--accent-soft); border: 1px solid var(--accent); font-weight: 600; }
-.sleep-next.late { background: var(--alert-bg); color: var(--alert-text); }
 .sleep-start-label {
   font-family: var(--serif); font-style: italic;
   font-size: 13px; color: var(--accent-dark);
   margin: 14px 0 6px;
 }
 .sleep-places {
-  display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;
+  display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px;
 }
-.sleep-places.two { grid-template-columns: repeat(2, 1fr); }
+.sleep-places.two { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+.sleep-places.three { grid-template-columns: repeat(3, 1fr); gap: 8px; }
 .sleep-places button {
   background: var(--paper);
   border: 1px solid var(--border);
@@ -1347,7 +1332,7 @@ textarea.ev-input { resize: vertical; min-height: 60px; font-size: 15px; }
   padding: 12px 4px;
   min-height: 70px;
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
-  font-size: 12px; color: var(--text-dark);
+  font-size: 11.5px; color: var(--text-dark);
   transition: transform 0.05s;
 }
 .sleep-places button:active { transform: scale(0.97); background: var(--accent-soft); }
@@ -1369,18 +1354,6 @@ textarea.ev-input { resize: vertical; min-height: 60px; font-size: 15px; }
   font-size: 14px; color: var(--text-dark);
 }
 .sleep-actions button:active { background: var(--accent-soft); }
-.sleep-total {
-  margin-top: 14px; padding-top: 12px;
-  border-top: 1px solid var(--border);
-  font-size: 13px; color: var(--text-medium); line-height: 1.5;
-}
-.sleep-total strong { color: var(--text-dark); }
-.sleep-verdict {
-  display: inline-block; margin-left: 2px;
-  font-size: 12px; font-style: italic;
-}
-.sleep-verdict.low { color: var(--alert-text); }
-.sleep-verdict.ok { color: var(--accent-dark); }
 .sleep-more {
   display: block; width: 100%; margin-top: 12px;
   background: none; border: none; padding: 4px 0;
@@ -1410,6 +1383,7 @@ textarea.ev-input { resize: vertical; min-height: 60px; font-size: 15px; }
 }
 .pd-table { margin-top: 10px; display: flex; flex-direction: column; gap: 7px; }
 .pd-row { display: grid; grid-template-columns: 112px 1fr 40px; gap: 8px; align-items: center; font-size: 12.5px; color: var(--text-medium); }
+.pd-row.wide { grid-template-columns: 104px 1fr 56px; }
 .pd-bar { height: 8px; background: var(--paper); border-radius: 4px; overflow: hidden; }
 .pd-bar i { display: block; height: 100%; background: var(--accent); border-radius: 4px; }
 .pd-val { text-align: right; font-variant-numeric: tabular-nums; color: var(--text-dark); }
@@ -1430,3 +1404,91 @@ textarea.ev-input { resize: vertical; min-height: 60px; font-size: 15px; }
 .sleep-add { margin: 0 0 10px; padding: 11px; font-size: 14px; }
 .sleep-check { display: flex; align-items: center; gap: 8px; margin-top: 10px; font-size: 14px; color: var(--text-dark); }
 .sleep-check input { width: 18px; height: 18px; }
+
+/* ---- Sonno: grafica con barre ---- */
+.sleep-card { padding: 18px 16px 14px; }
+.sleep-state-lbl {
+  font-family: var(--serif); font-style: italic;
+  font-size: 15px; color: var(--accent-dark);
+}
+.sleep-state-lbl .js-sleep-tick { font-variant-numeric: tabular-nums; }
+.sleep-timer {
+  font-family: var(--serif);
+  font-size: 46px; font-weight: 600; line-height: 1.1;
+  color: var(--text-dark);
+  font-variant-numeric: tabular-nums;
+  margin: 6px 0 12px;
+}
+.sbar {
+  position: relative;
+  height: 14px; border-radius: 7px;
+  background: var(--paper);
+  border: 1px solid var(--border);
+  overflow: visible;
+}
+.sbar > i {
+  display: block; height: 100%;
+  border-radius: 7px;
+  background: linear-gradient(90deg, var(--accent) 0%, var(--accent-dark) 100%);
+  transition: width 1s linear;
+}
+.sbar > i.over { background: var(--accent-dark); }
+.sbar > .sband {
+  position: absolute; top: -3px; bottom: -3px;
+  border: 2px solid var(--accent-dark);
+  border-radius: 8px;
+  background: rgba(212, 162, 76, 0.18);
+  pointer-events: none;
+}
+.sbar-labels {
+  display: flex; justify-content: space-between; gap: 10px;
+  margin-top: 8px;
+  font-size: 11.5px; color: var(--text-medium); line-height: 1.35;
+}
+.sbar-labels span:last-child { text-align: right; }
+.sleep-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+.chip {
+  background: var(--paper); border: 1px solid var(--border);
+  border-radius: 999px; padding: 4px 10px;
+  font-size: 12px; color: var(--text-dark);
+}
+
+/* Sveglio: conto alla rovescia + fascia */
+.sleep-next {
+  margin-top: 8px; padding: 14px 14px 12px;
+  border-radius: 16px;
+  background: var(--paper);
+  border: 1px solid var(--border);
+}
+.sn-big {
+  font-family: var(--serif);
+  font-size: 34px; font-weight: 600; line-height: 1.1;
+  color: var(--text-dark);
+  font-variant-numeric: tabular-nums;
+}
+.sn-small {
+  font-size: 13px; line-height: 1.45;
+  color: var(--text-medium);
+  margin: 6px 0 14px;
+}
+.sleep-next.open { background: var(--accent-soft); border-color: var(--accent); }
+.sleep-next.open .sn-big { color: var(--accent-dark); }
+.sleep-next.late { background: var(--alert-bg); border-color: transparent; }
+.sleep-next.late .sn-big, .sleep-next.late .sn-small { color: var(--alert-text); }
+.sleep-next.late .sbar > i { background: var(--alert-text); }
+
+/* Barra delle 24 ore */
+.sleep-day {
+  margin-top: 16px; padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+.sleep-day-head {
+  display: flex; justify-content: space-between; align-items: baseline; gap: 8px;
+  margin-bottom: 8px;
+  font-size: 12.5px; color: var(--text-medium);
+}
+.sd-lbl { font-family: var(--serif); font-style: italic; color: var(--accent-dark); font-size: 13px; }
+.sd-val strong { color: var(--text-dark); font-size: 15px; }
+.sd-note { margin-top: 8px; font-size: 12px; font-style: italic; color: var(--text-medium); }
+.sd-note.low { color: var(--text-medium); }
+.sd-note.ok { color: var(--accent-dark); }
