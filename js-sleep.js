@@ -425,6 +425,127 @@ function setSleepChip(group, val) {
   if (hidden) hidden.value = val;
 }
 
+/* ---------- MODIFICHE RAPIDE (orari e luogo, dalla card) ---------- */
+
+function lastClosedSleep(childId) {
+  let best = null;
+  sleepSessions(childId).forEach(e => {
+    const en = sleepEndTs(e);
+    if (en != null && (best == null || en > sleepEndTs(best))) best = e;
+  });
+  return best;
+}
+
+let quickTimeCtx = null;
+
+function openQuickTime(which) {
+  const child = getActiveChild();
+  if (!child) return;
+  let ev = null, ts = null;
+  if (which === 'start') {
+    ev = currentSleep(child.id);
+    ts = ev ? ev.ts : null;
+  } else {
+    if (currentSleep(child.id)) { toast('Sta dormendo: tocca «modifica» sul sonno in corso'); return; }
+    ev = lastClosedSleep(child.id);
+    ts = ev ? sleepEndTs(ev) : null;
+  }
+  if (!ev || ts == null) return;
+  quickTimeCtx = { which, id: ev.id };
+
+  const p = _dtParts(ts);
+  const presets = [0, 5, 10, 15, 20, 30, 45, 60];
+  document.getElementById('sheetTitle').textContent = which === 'start' ? 'A che ora si è addormentato?' : 'A che ora si è svegliato?';
+  document.getElementById('sheetSub').textContent = child.name;
+  document.getElementById('sheetBody').innerHTML = `
+    <div class="ev-form">
+      <div class="phase-section-body">Segnato alle <strong>${fmtTime(ts)}</strong>. Se l'hai registrato in ritardo, scegli quanto tempo fa è successo:</div>
+      <div class="ev-choice" style="margin-top:10px">
+        ${presets.map(m => `<button type="button" class="ev-choice-btn" style="min-width:70px" onclick="setQuickTimeAgo(${m})">${m === 0 ? 'adesso' : (m < 60 ? m + ' min fa' : '1 h fa')}</button>`).join('')}
+      </div>
+      <label class="ev-label">Oppure imposta l'ora esatta</label>
+      <div class="ev-form-row two">
+        <input type="date" id="qtD" class="ev-input" value="${p.date}">
+        <input type="time" id="qtT" class="ev-input" value="${p.time}">
+      </div>
+      <div class="ev-actions">
+        <button class="ev-delete" style="color:var(--text-medium)" onclick="openSleepForm('${ev.id}')">Modifica tutto</button>
+        <button class="ev-save" onclick="saveQuickTime()">Salva</button>
+      </div>
+    </div>`;
+  document.getElementById('sheetOverlay').classList.add('open');
+  document.getElementById('sheet').classList.add('open');
+}
+
+function setQuickTimeAgo(min) {
+  const p = _dtParts(Date.now() - min * MIN_MS);
+  document.getElementById('qtD').value = p.date;
+  document.getElementById('qtT').value = p.time;
+}
+
+function saveQuickTime() {
+  const child = getActiveChild();
+  if (!child || !quickTimeCtx) return;
+  const ev = DATA.events.find(e => e.id === quickTimeCtx.id && e.kind === 'sleep');
+  if (!ev) { closeSheet(); return; }
+  const ts = _dtParse(document.getElementById('qtD').value, document.getElementById('qtT').value);
+  if (isNaN(ts)) { toast('Manca l\'ora'); return; }
+  if (ts > Date.now() + MIN_MS) { toast('L\'orario è nel futuro'); return; }
+
+  const all = sleepSessions(child.id);
+  const i = all.findIndex(e => e.id === ev.id);
+  const prev = i > 0 ? all[i - 1] : null;
+  const next = i >= 0 && i < all.length - 1 ? all[i + 1] : null;
+
+  if (quickTimeCtx.which === 'start') {
+    const prevEnd = prev ? sleepEndTs(prev) : null;
+    if (prevEnd != null && ts < prevEnd) { toast(`Si sovrappone al sonno precedente (finito alle ${fmtTime(prevEnd)})`); return; }
+    ev.ts = ts;
+    // i posamenti collegati ricalcolano "dopo quanti minuti"
+    DATA.events.filter(e => e.kind === 'putdown' && e.data && e.data.sleep_id === ev.id).forEach(pd => {
+      pd.data = Object.assign({}, pd.data, { after_min: Math.max(0, Math.round((pd.ts - ts) / MIN_MS)) });
+      syncPushEvent(pd);
+    });
+  } else {
+    if (ts <= ev.ts + MIN_MS) { toast(`Il risveglio deve essere dopo l'addormentamento (${fmtTime(ev.ts)})`); return; }
+    if (next && ts > next.ts) { toast(`È dopo l'addormentamento successivo (${fmtTime(next.ts)})`); return; }
+    ev.data = Object.assign({}, ev.data, { end_ts: ts });
+  }
+  saveData();
+  syncPushEvent(ev);
+  quickTimeCtx = null;
+  closeSheet();
+  toast('Orario aggiornato');
+  refreshSleepViews();
+}
+
+function openQuickPlace() {
+  const child = getActiveChild();
+  if (!child) return;
+  const cur = currentSleep(child.id);
+  if (!cur) return;
+  document.getElementById('sheetTitle').textContent = 'Dove dorme?';
+  document.getElementById('sheetSub').textContent = child.name;
+  document.getElementById('sheetBody').innerHTML = `
+    <div class="sleep-places">
+      ${SLEEP_PLACE_ORDER.map(k => `<button class="${cur.data.place === k ? 'is-current' : ''}" onclick="setCurrentPlace('${k}')"><span class="sp-ico">${SLEEP_PLACES[k].ico}</span><span>${SLEEP_PLACES[k].short}</span></button>`).join('')}
+    </div>`;
+  document.getElementById('sheetOverlay').classList.add('open');
+  document.getElementById('sheet').classList.add('open');
+}
+
+function setCurrentPlace(place) {
+  const child = getActiveChild();
+  if (!child) return;
+  const cur = currentSleep(child.id);
+  if (!cur || !SLEEP_PLACES[place]) { closeSheet(); return; }
+  cur.data = Object.assign({}, cur.data, { place });
+  saveData();
+  syncPushEvent(cur);
+  closeSheet();
+  refreshSleepViews();
+}
+
 /* ---------- FORM SESSIONE (aggiungi / modifica) ---------- */
 
 let editingSleepId = null;
@@ -629,24 +750,24 @@ function renderSleepCard(child, inPage) {
         <div class="sleep-state-lbl">${isNap ? '😴 Pisolino in corso' : '🌙 Notte in corso'}</div>
         <button class="sleep-edit" onclick="openSleepForm('${cur.id}')">modifica</button>
       </div>
-      <div class="sleep-timer js-sleep-tick" data-fmt="timer" data-since="${cur.ts}">${fmtElapsed(now - cur.ts)}</div>`;
+      <div class="sleep-timer js-sleep-tick" data-fmt="timer" data-since="${cur.ts}" onclick="openQuickTime('start')">${fmtElapsed(now - cur.ts)}</div>`;
 
     const typ = isNap ? typicalNapMin(child, now, cur) : null;
     if (typ) {
       const full = typ.min * MIN_MS;
       const pct = pctClamp((now - cur.ts) / full * 100);
       h += `<div class="sbar nap"><i class="js-nap-fill ${now - cur.ts >= full ? 'over' : ''}" data-since="${cur.ts}" data-full="${full}" style="width:${Math.max(2, pct).toFixed(1)}%"></i></div>
-        <div class="sbar-labels"><span>dalle ${fmtTime(cur.ts)}</span><span>${typ.kind === 'index' ? `media dei suoi ${typ.idx}° pisolini` : (typ.kind === 'all' ? 'media dei suoi pisolini' : 'pisolino tipico per l\'età')}: ~${fmtDur(typ.min)}</span></div>`;
+        <div class="sbar-labels"><span><button class="link-btn" onclick="openQuickTime('start')">dalle ${fmtTime(cur.ts)} ✎</button></span><span>${typ.kind === 'index' ? `media dei suoi ${typ.idx}° pisolini` : (typ.kind === 'all' ? 'media dei suoi pisolini' : 'pisolino tipico per l\'età')}: ~${fmtDur(typ.min)}</span></div>`;
     } else {
-      h += `<div class="sbar-labels"><span>dalle ${fmtTime(cur.ts)}</span><span></span></div>`;
+      h += `<div class="sbar-labels"><span><button class="link-btn" onclick="openQuickTime('start')">dalle ${fmtTime(cur.ts)} ✎</button></span><span></span></div>`;
     }
 
     h += `<div class="sleep-chips">
-        <span class="chip">${place.ico} ${place.label}</span>
-        ${wakesN ? `<span class="chip">👁️ ${wakesN} ${wakesN === 1 ? 'risveglio breve' : 'risvegli brevi'}</span>` : ''}
+        <button class="chip" onclick="openQuickPlace()">${place.ico} ${place.label} ✎</button>
+        ${wakesN ? `<button class="chip" onclick="openSleepForm('${cur.id}')">👁️ ${wakesN} ${wakesN === 1 ? 'risveglio breve' : 'risvegli brevi'} ✎</button>` : ''}
       </div>`;
     if (pd) {
-      h += `<div class="sleep-sub">Posato alle ${fmtTime(pd.ts)} (dopo ${pd.data.after_min} min). Se si sveglia, tocca «Si è svegliato».</div>`;
+      h += `<div class="sleep-sub tappable" onclick="openPutdownEdit('${pd.id}')">Posato alle ${fmtTime(pd.ts)} (dopo ${pd.data.after_min} min) ✎. Se si sveglia, tocca «Si è svegliato».</div>`;
     }
     if (cur.data.place === 'bed') {
       h += `<div class="sleep-sub">Nel lettone: niente cuscini o coperte vicino a lui e, se puoi, rimettilo nel suo spazio appena possibile.</div>`;
@@ -658,7 +779,8 @@ function renderSleepCard(child, inPage) {
       </div>`;
   } else {
     const lastEnd = lastWakeTs(child.id);
-    h += `<div class="sleep-top"><div class="sleep-state-lbl">☀️ Sveglio${lastEnd ? ` da <span class="js-sleep-tick" data-fmt="dur" data-since="${lastEnd}">${fmtDur((now - lastEnd) / MIN_MS)}</span>` : ''}</div></div>`;
+    h += `<div class="sleep-top"><div class="sleep-state-lbl">☀️ Sveglio${lastEnd ? ` da <span class="js-sleep-tick" data-fmt="dur" data-since="${lastEnd}">${fmtDur((now - lastEnd) / MIN_MS)}</span>` : ''}</div>
+      ${lastEnd ? `<button class="sleep-edit" onclick="openQuickTime('wake')">modifica</button>` : ''}</div>`;
 
     const pred = predictNextSleep(child, now);
     if (pred.kind === 'ok') {
@@ -670,13 +792,13 @@ function renderSleepCard(child, inPage) {
           <div class="sn-big js-sn-big">${escapeHtml(st.big)}</div>
           <div class="sn-small js-sn-small">${escapeHtml(st.small)}</div>
           <div class="sbar awake"><i class="js-awake-fill" style="width:${Math.max(2, pct).toFixed(1)}%"></i><b class="sband" style="left:${bandL.toFixed(1)}%;width:${bandW.toFixed(1)}%"></b></div>
-          <div class="sbar-labels"><span>risveglio ${fmtTime(pred.lastEnd)}</span><span>fascia ${pred.lo}-${pred.hi} min di veglia</span></div>
+          <div class="sbar-labels"><span><button class="link-btn" onclick="openQuickTime('wake')">risveglio ${fmtTime(pred.lastEnd)} ✎</button></span><span>fascia ${pred.lo}-${pred.hi} min di veglia</span></div>
         </div>`;
       h += `<div class="sleep-sub">${pred.personal
         ? `Fascia tarata sui suoi ultimi ${pred.n} pisolini.`
         : 'Fascia indicativa per questa età. Si affina da sola dopo qualche giorno di registrazioni.'}</div>`;
     } else if (pred.kind === 'stale') {
-      h += `<div class="sleep-sub">Ultimo risveglio registrato alle ${fmtTime(pred.lastEnd)}. Se ha dormito dopo, aggiungilo con «+ sonno».</div>`;
+      h += `<div class="sleep-sub">Ultimo risveglio registrato alle ${fmtTime(pred.lastEnd)}. Se ha dormito dopo, aggiungilo con «+ sonno dimenticato».</div>`;
     } else if (pred.kind === 'nodata') {
       h += `<div class="sleep-sub">Segna il primo sonno: da lì calcolo la fascia del prossimo.</div>`;
     }
@@ -689,9 +811,10 @@ function renderSleepCard(child, inPage) {
 
   h += renderDayBar(child, now, ref);
 
-  if (!inPage) {
-    h += `<button class="sleep-more" onclick="goTo('sonno')">Posamenti, orari e consigli ›</button>`;
-  }
+  h += `<div class="sleep-foot">
+    <button onclick="openSleepForm()">+ sonno dimenticato</button>
+    ${!inPage ? `<button onclick="goTo('sonno')">Posamenti, orari e consigli ›</button>` : ''}
+  </div>`;
   h += `</div>`;
   return h;
 }

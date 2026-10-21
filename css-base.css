@@ -1354,6 +1354,24 @@ textarea.ev-input { resize: vertical; min-height: 60px; font-size: 15px; }
   font-size: 14px; color: var(--text-dark);
 }
 .sleep-actions button:active { background: var(--accent-soft); }
+.link-btn {
+  background: none; border: none; padding: 0;
+  color: inherit; font: inherit;
+  text-decoration: underline dotted; text-underline-offset: 3px;
+}
+.sleep-timer { cursor: pointer; }
+button.chip { font-family: inherit; cursor: pointer; }
+.sleep-sub.tappable { cursor: pointer; }
+.sleep-places button.is-current { border-color: var(--accent); background: var(--accent-soft); }
+.sleep-foot {
+  display: flex; justify-content: space-between; align-items: center; gap: 10px;
+  margin-top: 14px;
+}
+.sleep-foot button {
+  background: none; border: none; padding: 4px 0;
+  font-family: var(--serif); font-style: italic; font-size: 13px;
+  color: var(--accent-dark);
+}
 .sleep-more {
   display: block; width: 100%; margin-top: 12px;
   background: none; border: none; padding: 4px 0;
