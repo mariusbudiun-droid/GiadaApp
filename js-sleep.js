@@ -6,7 +6,9 @@
 
    Modello dati (nessun SQL nuovo, usa la tabella kin_events):
      kind 'sleep'    ts = inizio
-                     data { end_ts|null, type:'nap'|'night', place, wakes:[ts|null,...] }
+                     data { end_ts|null, type:'nap'|'night', place,
+                            pauses:[{s, e|null}, ...] }   // pause = è sveglio dentro il sonno
+                     (formato vecchio: wakes:[ts|null,...], ancora letto: ogni voce = pausa breve)
      kind 'putdown'  ts = quando l'ho posato
                      data { sleep_id, after_min, place, result:null|'stayed'|'woke' }
 
@@ -116,6 +118,46 @@ function sleepEndTs(e) {
 function sleepType(e) {
   return (e.data && e.data.type) || sleepTypeFor(e.ts);
 }
+/* ---------- PAUSE (è sveglio dentro un sonno: poppata, pianto, cambio...) ---------- */
+
+function sessionPauses(e) {
+  const d = e.data || {};
+  if (Array.isArray(d.pauses)) {
+    return d.pauses.map(p => ({ s: Number(p.s), e: p.e != null ? Number(p.e) : null }));
+  }
+  // formato vecchio (v0.5.x): risvegli brevi = solo orari
+  return (d.wakes || []).map(w => { const t = (w != null) ? Number(w) : e.ts; return { s: t, e: t }; });
+}
+function openPauseOf(e) {
+  return sessionPauses(e).find(p => p.e == null) || null;
+}
+/* Converte il formato vecchio in pauses prima di modificare */
+function ensurePauses(e) {
+  if (Array.isArray(e.data.pauses)) return;
+  e.data = Object.assign({}, e.data, { pauses: sessionPauses(e).map(p => ({ s: p.s, e: p.e })), wakes: [] });
+}
+/* minuti di pausa dentro [from, to] */
+function pauseMinIn(e, from, to, now) {
+  let ms = 0;
+  sessionPauses(e).forEach(p => {
+    const pe = p.e != null ? p.e : now;
+    const a = Math.max(p.s, from), b = Math.min(pe, to);
+    if (b > a) ms += b - a;
+  });
+  return ms / MIN_MS;
+}
+/* Minuti di sonno EFFETTIVO (durata meno pause) dentro [from, to] */
+function sleepNetMin(e, from, to, now) {
+  now = now || Date.now();
+  if (from == null) from = -Infinity;
+  if (to == null) to = Infinity;
+  const en = sleepEndTs(e);
+  const s = Math.max(e.ts, from);
+  const t = Math.min(en != null ? en : now, to, now);
+  if (t <= s) return 0;
+  return Math.max(0, (t - s) / MIN_MS - pauseMinIn(e, s, t, now));
+}
+
 function currentSleep(childId) {
   const open = sleepSessions(childId).filter(e => sleepEndTs(e) == null);
   return open.length ? open[open.length - 1] : null;
@@ -157,17 +199,25 @@ function putdownResult(pd, now) {
 
 function sleepTotals(childId, now) {
   const from = now - DAY_MS;
-  let nap = 0, night = 0, firstTs = Infinity;
+  const T = {
+    nap:   { min: 0, count: 0, pauseN: 0, pauseMin: 0 },
+    night: { min: 0, count: 0, pauseN: 0, pauseMin: 0 }
+  };
+  let firstTs = Infinity;
   sleepSessions(childId).forEach(e => {
     firstTs = Math.min(firstTs, e.ts);
     const en = sleepEndTs(e);
-    const s = Math.max(e.ts, from);
-    const t = Math.min(en != null ? en : now, now);
+    const s = Math.max(e.ts, from), t = Math.min(en != null ? en : now, now);
     if (t <= s) return;
-    const min = (t - s) / MIN_MS;
-    if (sleepType(e) === 'night') night += min; else nap += min;
+    const k = sleepType(e) === 'night' ? 'night' : 'nap';
+    T[k].min += sleepNetMin(e, from, now, now);
+    T[k].count++;
+    sessionPauses(e).forEach(p => {
+      if (p.s >= from && p.s <= now) T[k].pauseN++;
+    });
+    T[k].pauseMin += pauseMinIn(e, from, now, now);
   });
-  return { nap, night, total: nap + night, complete: isFinite(firstTs) && (now - firstTs) >= DAY_MS };
+  return { nap: T.nap, night: T.night, total: T.nap.min + T.night.min, complete: isFinite(firstTs) && (now - firstTs) >= DAY_MS };
 }
 
 function sleepTotalVerdict(totalMin, ref) {
@@ -195,7 +245,7 @@ function averageNapMin(childId, now) {
   const from = now - 7 * DAY_MS;
   const durs = sleepSessions(childId)
     .filter(e => sleepEndTs(e) != null && e.ts >= from && sleepType(e) === 'nap')
-    .map(e => (sleepEndTs(e) - e.ts) / MIN_MS)
+    .map(e => sleepNetMin(e))
     .filter(m => m >= 5 && m <= 240);
   return durs.length >= 3 ? durs.reduce((a, b) => a + b, 0) / durs.length : null;
 }
@@ -218,7 +268,7 @@ function napAveragesByIndex(childId, now) {
   napsByDayIndexed(childId).forEach(r => {
     const en = sleepEndTs(r.ev);
     if (en == null || r.ev.ts < from) return;
-    const m = (en - r.ev.ts) / MIN_MS;
+    const m = sleepNetMin(r.ev);
     if (m >= 5 && m <= 240) (groups[r.idx] = groups[r.idx] || []).push(m);
   });
   return Object.keys(groups).map(Number).sort((a, b) => a - b).map(i => ({
@@ -252,20 +302,67 @@ function predictNextSleep(child, now) {
 }
 
 function napStatus(startTs, endTs, now) {
+  const hh = new Date(startTs).getHours();
+  const what = hh >= 19 ? 'nanna della sera' : (hh < 5 ? 'sonno' : 'pisolino');
+  const next = hh >= 19 ? 'prossima ' : 'prossimo ';
   if (now < startTs) {
     const m = Math.ceil((startTs - now) / MIN_MS);
-    const hh = new Date(startTs).getHours();
-    const eve = (hh >= 19) ? ' · probabilmente la nanna della sera' : '';
-    return { cls: 'before', big: 'tra ' + fmtDur(m), small: `Prossimo sonno · ${fmtTime(startTs)}-${fmtTime(endTs)}${eve}` };
+    return { cls: 'before', kicker: next + what, big: 'tra ' + fmtDur(m), small: `${fmtTime(startTs)}-${fmtTime(endTs)}`, advice: '' };
   }
   if (now <= endTs) {
-    return { cls: 'open', big: 'È il momento', small: `Finestra aperta fino alle ${fmtTime(endTs)}: prova a farlo dormire` };
+    return { cls: 'open', kicker: 'finestra aperta', big: 'È ora', small: `fino alle ${fmtTime(endTs)}`, advice: 'Buon momento per provare a farlo dormire.' };
   }
   const late = Math.round((now - endTs) / MIN_MS);
-  return { cls: 'late', big: 'oltre di ' + fmtDur(late), small: 'Finestra superata: se è già agitato, prova subito a calmarlo e a farlo dormire' };
+  return { cls: 'late', kicker: 'finestra superata', big: '+' + fmtDur(late), small: `da ${fmtTime(endTs)}`, advice: 'Se è già agitato, prova subito a calmarlo e a farlo dormire.' };
 }
 
+/* Durata "tipica" del pisolino in corso. In ordine di preferenza:
+   1) la media dei suoi pisolini nella STESSA posizione della giornata (1°, 2°, 3°...),
+      se ne ha almeno 3 negli ultimi 7 giorni
+   2) la media di tutti i suoi pisolini, se sono almeno 3
+   3) una stima dai riferimenti per età (indicativa).  Tutto in minuti di sonno EFFETTIVO. */
+function typicalNapMin(child, now, cur) {
+  const r5 = m => Math.max(5, Math.round(m / 5) * 5);
+  if (cur) {
+    const me = napsByDayIndexed(child.id).find(x => x.ev.id === cur.id);
+    if (me) {
+      const row = napAveragesByIndex(child.id, now).find(x => x.idx === me.idx);
+      if (row && row.n >= 3) return { min: r5(row.avg), kind: 'index', idx: me.idx };
+    }
+  }
+  const avg = averageNapMin(child.id, now);
+  if (avg) return { min: r5(avg), kind: 'all' };
+  const ww = wakeWindowFor(sleepAgeMonths(child));
+  return ww ? { min: ww.napMin, kind: 'ref' } : null;
+}
+
+/* Durata media (effettiva) delle sue notti, ultimi 14 giorni, se ne ha almeno 3 */
+function averageNightMin(childId, now) {
+  const from = now - 14 * DAY_MS;
+  const durs = sleepSessions(childId)
+    .filter(e => sleepEndTs(e) != null && e.ts >= from && sleepType(e) === 'night')
+    .map(e => sleepNetMin(e))
+    .filter(m => m >= 120 && m <= 960);
+  return durs.length >= 3 ? durs.reduce((a, b) => a + b, 0) / durs.length : null;
+}
+
+/* ms di pausa già chiuse in una sessione */
+function closedPauseMs(e) {
+  return sessionPauses(e).reduce((t, p) => t + (p.e != null ? Math.max(0, p.e - p.s) : 0), 0);
+}
+
+function pctClamp(x) { return Math.max(0, Math.min(100, x)); }
+
 /* ---------- AZIONI AL TAP ---------- */
+
+/* Tipo scelto per il prossimo sonno: se non scelto, si deduce dall'ora (19-6 = notte) */
+function currentTypeSel() {
+  return window.__sleepTypeSel || sleepTypeFor(Date.now());
+}
+function setSleepTypeSel(t) {
+  window.__sleepTypeSel = (t === 'night' || t === 'nap') ? t : null;
+  renderSleepPageIfActive();
+}
 
 function sleepStart(place) {
   const child = getActiveChild();
@@ -274,8 +371,9 @@ function sleepStart(place) {
   const now = Date.now();
   const ev = {
     id: uid(), child_id: child.id, kind: 'sleep', ts: now,
-    data: { end_ts: null, type: sleepTypeFor(now), place: SLEEP_PLACES[place] ? place : 'arms', wakes: [] }
+    data: { end_ts: null, type: currentTypeSel(), place: SLEEP_PLACES[place] ? place : 'arms', pauses: [] }
   };
+  window.__sleepTypeSel = null;
   DATA.events.push(ev);
   saveData();
   syncPushEvent(ev);
@@ -287,23 +385,103 @@ function sleepWake() {
   if (!child) return;
   const cur = currentSleep(child.id);
   if (!cur) return;
-  cur.data = Object.assign({}, cur.data, { end_ts: Date.now() });
+  const now = Date.now();
+  ensurePauses(cur);
+  // se era in pausa, la pausa finisce quando finisce il sonno
+  const pauses = cur.data.pauses.map(p => p.e == null ? { s: p.s, e: Math.max(now, p.s) } : p);
+  cur.data = Object.assign({}, cur.data, { end_ts: now, pauses });
   saveData();
   syncPushEvent(cur);
   refreshSleepViews();
 }
 
-function sleepBriefWake() {
+/* In pausa e non si riaddormenta: il sonno finisce quando è INIZIATA la pausa
+   (è lì che si è svegliato davvero) e da quel momento conta la veglia. */
+function sleepWakeAtPause() {
   const child = getActiveChild();
   if (!child) return;
   const cur = currentSleep(child.id);
   if (!cur) return;
-  const wakes = (cur.data.wakes || []).concat([Date.now()]);
-  cur.data = Object.assign({}, cur.data, { wakes });
+  const open = openPauseOf(cur);
+  if (!open) { sleepWake(); return; }
+  ensurePauses(cur);
+  const end = Math.max(open.s, cur.ts + MIN_MS);
+  const pauses = cur.data.pauses.filter(p => p.e != null && p.s < end);
+  cur.data = Object.assign({}, cur.data, { end_ts: end, pauses });
   saveData();
   syncPushEvent(cur);
-  toast('Risveglio breve segnato');
+  toast('Sonno finito alle ' + fmtTime(end));
   refreshSleepViews();
+}
+
+/* ---------- PAUSE: azioni ---------- */
+
+function _savePausesFor(cur, pauses, msg) {
+  cur.data = Object.assign({}, cur.data, { pauses });
+  saveData();
+  syncPushEvent(cur);
+  closeSheet();
+  if (msg) toast(msg);
+  refreshSleepViews();
+}
+
+function startPause() {
+  const child = getActiveChild();
+  if (!child) return;
+  const cur = currentSleep(child.id);
+  if (!cur || openPauseOf(cur)) { closeSheet(); return; }
+  ensurePauses(cur);
+  _savePausesFor(cur, cur.data.pauses.concat([{ s: Date.now(), e: null }]), 'Pausa iniziata');
+}
+
+function endPause() {
+  const child = getActiveChild();
+  if (!child) return;
+  const cur = currentSleep(child.id);
+  if (!cur) return;
+  ensurePauses(cur);
+  const now = Date.now();
+  _savePausesFor(cur, cur.data.pauses.map(p => p.e == null ? { s: p.s, e: Math.max(now, p.s) } : p), 'Riprende a dormire');
+}
+
+/* Pausa già finita: "è stato sveglio N minuti" (finisce adesso) */
+function addPastPause(min) {
+  const child = getActiveChild();
+  if (!child) return;
+  const cur = currentSleep(child.id);
+  if (!cur) { closeSheet(); return; }
+  min = Math.round(Number(min));
+  if (!(min >= 1 && min <= 240)) { toast('Metti un numero di minuti tra 1 e 240'); return; }
+  const now = Date.now();
+  const s = Math.max(cur.ts, now - min * MIN_MS);
+  ensurePauses(cur);
+  _savePausesFor(cur, cur.data.pauses.concat([{ s, e: now }]).sort((a, b) => a.s - b.s), `Pausa di ${min} min segnata`);
+}
+function addCustomPause() {
+  addPastPause(parseDecimalInput(document.getElementById('pzMin').value));
+}
+
+function openPauseSheet() {
+  const child = getActiveChild();
+  if (!child) return;
+  const cur = currentSleep(child.id);
+  if (!cur) { toast('Prima segna che si è addormentato'); return; }
+  document.getElementById('sheetTitle').textContent = 'Pausa';
+  document.getElementById('sheetSub').textContent = child.name;
+  document.getElementById('sheetBody').innerHTML = `
+    <div class="phase-section-body">Si è svegliato dentro il sonno (poppata, pianto, cambio…) ma il sonno non è finito.</div>
+    <button class="sleep-main-btn" onclick="startPause()">⏸️ Inizia pausa adesso</button>
+    <div class="ev-hint" style="margin-top:6px">Quando si riaddormenta tocca «Riprende a dormire»: conto io i minuti.</div>
+    <label class="ev-label" style="margin-top:16px">Oppure: è già ripreso. Quanti minuti è stato sveglio?</label>
+    <div class="ev-choice">
+      ${[1, 2, 3, 5, 10, 15, 20, 30].map(m => `<button type="button" class="ev-choice-btn" style="min-width:64px" onclick="addPastPause(${m})">${m} min</button>`).join('')}
+    </div>
+    <div class="ev-form-row two" style="margin-top:10px">
+      <input type="text" id="pzMin" class="ev-input" inputmode="numeric" placeholder="altro: minuti">
+      <button class="ev-save" onclick="addCustomPause()">Aggiungi</button>
+    </div>`;
+  document.getElementById('sheetOverlay').classList.add('open');
+  document.getElementById('sheet').classList.add('open');
 }
 
 /* ---------- POSAMENTO ---------- */
@@ -562,6 +740,47 @@ function _dtParse(dateStr, timeStr) {
   return d.getTime();
 }
 
+let formPauses = [];
+
+function pauseRowsHtml() {
+  if (!formPauses.length) return '<div class="ev-hint">Nessuna pausa.</div>';
+  return formPauses.map((p, i) => {
+    const dur = p.e == null ? 'in corso' : (p.e - p.s < MIN_MS ? 'breve' : fmtDur((p.e - p.s) / MIN_MS));
+    return `<div class="pz-row"><span><strong>${fmtTime(p.s)}</strong> · ${dur}</span><button type="button" class="pz-del" onclick="removeFormPause(${i})" aria-label="Elimina pausa">✕</button></div>`;
+  }).join('');
+}
+function removeFormPause(i) {
+  formPauses.splice(i, 1);
+  const el = document.getElementById('slPauseList');
+  if (el) el.innerHTML = pauseRowsHtml();
+}
+function addFormPause() {
+  const startTs = _dtParse(document.getElementById('slSD').value, document.getElementById('slST').value);
+  if (isNaN(startTs)) { toast('Prima metti l\'ora di addormentamento'); return; }
+  const ongoing = document.getElementById('slOngoing').checked;
+  const endTs = ongoing ? null : _dtParse(document.getElementById('slED').value, document.getElementById('slET').value);
+  const limit = (endTs != null && !isNaN(endTs)) ? endTs : Date.now();
+  const tStr = document.getElementById('slPT').value;
+  const min = Math.round(parseDecimalInput(document.getElementById('slPM').value));
+  if (!tStr) { toast('Metti a che ora è iniziata la pausa'); return; }
+  if (!(min >= 1 && min <= 240)) { toast('Metti i minuti di pausa (da 1 a 240)'); return; }
+  // la data si ricava dal sonno: il primo giorno utile in cui la pausa sta dentro il sonno
+  let s = null;
+  for (let d = 0; d <= 2; d++) {
+    const n = new Date(startTs); n.setHours(12, 0, 0, 0); n.setDate(n.getDate() + d);
+    const cand = _dtParse(dateOf(n.getTime()), tStr);
+    if (cand >= startTs && cand + min * MIN_MS <= limit) { s = cand; break; }
+  }
+  if (s == null) { toast('La pausa deve stare dentro il sonno'); return; }
+  const e = s + min * MIN_MS;
+  const clash = formPauses.some(p => s < (p.e != null ? p.e : limit) && e > p.s);
+  if (clash) { toast('Si sovrappone a un\'altra pausa'); return; }
+  formPauses.push({ s, e });
+  formPauses.sort((a, b) => a.s - b.s);
+  document.getElementById('slPauseList').innerHTML = pauseRowsHtml();
+  document.getElementById('slPM').value = '';
+}
+
 function openSleepForm(evId) {
   const child = getActiveChild();
   if (!child) { toast('Aggiungi prima un figlio'); return; }
@@ -574,7 +793,7 @@ function openSleepForm(evId) {
   const ongoing = ex ? endTs == null : false;
   const type = ex ? sleepType(ex) : sleepTypeFor(startTs);
   const place = ex ? (ex.data.place || 'arms') : 'arms';
-  const wakesN = ex ? (ex.data.wakes || []).length : 0;
+  formPauses = ex ? sessionPauses(ex).map(p => ({ s: p.s, e: p.e })) : [];
   const sp = _dtParts(startTs), ep = _dtParts(endTs != null ? endTs : now);
   const chip = (g, v, label, cur) => `<button type="button" class="ev-choice-btn ${cur === v ? 'selected' : ''}" data-g="${g}" data-v="${v}" onclick="setSleepChip('${g}','${v}')">${label}</button>`;
 
@@ -599,8 +818,13 @@ function openSleepForm(evId) {
         <input type="time" id="slET" class="ev-input" value="${ep.time}">
       </div>
       <label class="sleep-check"><input type="checkbox" id="slOngoing" ${ongoing ? 'checked' : ''}> sta ancora dormendo</label>
-      <label class="ev-label">Risvegli brevi (si è riaddormentato subito)</label>
-      <input type="text" id="slWakes" class="ev-input" inputmode="numeric" value="${wakesN}">
+      <label class="ev-label">Pause (è stato sveglio ma il sonno non è finito)</label>
+      <div id="slPauseList" class="pz-list">${pauseRowsHtml()}</div>
+      <div class="pz-add">
+        <input type="time" id="slPT" class="ev-input" value="${sp.time}" aria-label="Ora di inizio pausa">
+        <input type="text" id="slPM" class="ev-input" inputmode="numeric" placeholder="minuti" aria-label="Minuti di pausa">
+        <button type="button" class="pz-add-btn" onclick="addFormPause()">+ pausa</button>
+      </div>
       <label class="ev-label">Nota (opzionale)</label>
       <textarea id="slNote" class="ev-input" rows="2" maxlength="300">${escapeHtml(ex?.note || '')}</textarea>
       <div class="ev-actions">
@@ -633,24 +857,24 @@ function saveSleepForm() {
 
   const type = document.getElementById('slTypeV').value || sleepTypeFor(startTs);
   const place = document.getElementById('slPlaceV').value || 'arms';
-  const wantN = Math.max(0, parseInt(document.getElementById('slWakes').value, 10) || 0);
+  const limit = endTs != null ? endTs : Date.now() + 5 * MIN_MS;
+  const pauses = formPauses.map(p => ({ s: p.s, e: (p.e == null && endTs != null) ? endTs : p.e }));
+  if (pauses.some(p => p.s < startTs || p.s > limit || (p.e != null && p.e > limit))) {
+    toast('Ci sono pause fuori dall\'orario del sonno: controlla gli orari'); return;
+  }
   const note = (document.getElementById('slNote').value || '').trim();
 
   const ex = editingSleepId ? DATA.events.find(e => e.id === editingSleepId && e.kind === 'sleep') : null;
-  let wakes = ex ? (ex.data.wakes || []).slice() : [];
-  if (wantN < wakes.length) wakes = wakes.slice(0, wantN);
-  while (wakes.length < wantN) wakes.push(null);
-
   let ev;
   if (ex) {
     ex.ts = startTs;
-    ex.data = Object.assign({}, ex.data, { end_ts: endTs, type, place, wakes });
+    ex.data = Object.assign({}, ex.data, { end_ts: endTs, type, place, pauses, wakes: [] });
     ex.note = note || undefined;
     ev = ex;
   } else {
     ev = {
       id: uid(), child_id: child.id, kind: 'sleep', ts: startTs,
-      data: { end_ts: endTs, type, place, wakes },
+      data: { end_ts: endTs, type, place, pauses },
       note: note || undefined
     };
     DATA.events.push(ev);
@@ -684,402 +908,3 @@ function deleteSleep(id) {
     refreshSleepViews();
   });
 }
-
-/* ---------- RENDER: CARD (home e pagina sonno) ---------- */
-
-/* Durata "tipica" del pisolino in corso. In ordine di preferenza:
-   1) la media dei suoi pisolini nella STESSA posizione della giornata (1°, 2°, 3°...),
-      se ne ha almeno 3 negli ultimi 7 giorni
-   2) la media di tutti i suoi pisolini, se sono almeno 3
-   3) una stima dai riferimenti per età (indicativa) */
-function typicalNapMin(child, now, cur) {
-  const r5 = m => Math.max(5, Math.round(m / 5) * 5);
-  if (cur) {
-    const me = napsByDayIndexed(child.id).find(x => x.ev.id === cur.id);
-    if (me) {
-      const row = napAveragesByIndex(child.id, now).find(x => x.idx === me.idx);
-      if (row && row.n >= 3) return { min: r5(row.avg), kind: 'index', idx: me.idx };
-    }
-  }
-  const avg = averageNapMin(child.id, now);
-  if (avg) return { min: r5(avg), kind: 'all' };
-  const ww = wakeWindowFor(sleepAgeMonths(child));
-  return ww ? { min: ww.napMin, kind: 'ref' } : null;
-}
-
-function pctClamp(x) { return Math.max(0, Math.min(100, x)); }
-
-function dayBarModel(totalMin, ref, complete) {
-  const scale = ref.max + 2;                         // ore: un po' di margine oltre il massimo
-  const hours = totalMin / 60;
-  const verdict = complete ? sleepTotalVerdict(totalMin, ref) : null;
-  return {
-    fill: pctClamp(hours / scale * 100),
-    bandLeft: ref.min / scale * 100,
-    bandWidth: (ref.max - ref.min) / scale * 100,
-    verdict
-  };
-}
-
-function renderDayBar(child, now, ref) {
-  const tot = sleepTotals(child.id, now);
-  const m = dayBarModel(tot.total, ref, tot.complete);
-  return `<div class="sleep-day js-sleep-day" data-child="${child.id}" data-min="${ref.min}" data-max="${ref.max}">
-    <div class="sleep-day-head">
-      <span class="sd-lbl">Sonno nelle ultime 24 h</span>
-      <span class="sd-val"><strong class="js-day-val">${fmtDur(tot.total)}</strong> su ${ref.min}-${ref.max} h</span>
-    </div>
-    <div class="sbar"><i class="js-day-fill" style="width:${m.fill.toFixed(1)}%"></i><b class="sband" style="left:${m.bandLeft.toFixed(1)}%;width:${m.bandWidth.toFixed(1)}%"></b></div>
-    <div class="sd-note js-day-note ${m.verdict ? m.verdict.cls : ''}">${m.verdict ? m.verdict.text : 'Il confronto parte dopo un giorno intero di registrazioni'}</div>
-  </div>`;
-}
-
-function renderSleepCard(child, inPage) {
-  const now = Date.now();
-  const cur = currentSleep(child.id);
-  const months = sleepAgeMonths(child);
-  const ref = sleepTotalRefFor(months);
-  let h = `<div class="sleep-card ${cur ? 'is-sleeping' : ''}">`;
-
-  if (cur) {
-    const place = SLEEP_PLACES[cur.data.place] || SLEEP_PLACES.other;
-    const wakesN = (cur.data.wakes || []).length;
-    const pd = latestPutdownForSleep(cur.id);
-    const isNap = sleepType(cur) === 'nap';
-    h += `<div class="sleep-top">
-        <div class="sleep-state-lbl">${isNap ? '😴 Pisolino in corso' : '🌙 Notte in corso'}</div>
-        <button class="sleep-edit" onclick="openSleepForm('${cur.id}')">modifica</button>
-      </div>
-      <div class="sleep-timer js-sleep-tick" data-fmt="timer" data-since="${cur.ts}" onclick="openQuickTime('start')">${fmtElapsed(now - cur.ts)}</div>`;
-
-    const typ = isNap ? typicalNapMin(child, now, cur) : null;
-    if (typ) {
-      const full = typ.min * MIN_MS;
-      const pct = pctClamp((now - cur.ts) / full * 100);
-      h += `<div class="sbar nap"><i class="js-nap-fill ${now - cur.ts >= full ? 'over' : ''}" data-since="${cur.ts}" data-full="${full}" style="width:${Math.max(2, pct).toFixed(1)}%"></i></div>
-        <div class="sbar-labels"><span><button class="link-btn" onclick="openQuickTime('start')">dalle ${fmtTime(cur.ts)} ✎</button></span><span>${typ.kind === 'index' ? `media dei suoi ${typ.idx}° pisolini` : (typ.kind === 'all' ? 'media dei suoi pisolini' : 'pisolino tipico per l\'età')}: ~${fmtDur(typ.min)}</span></div>`;
-    } else {
-      h += `<div class="sbar-labels"><span><button class="link-btn" onclick="openQuickTime('start')">dalle ${fmtTime(cur.ts)} ✎</button></span><span></span></div>`;
-    }
-
-    h += `<div class="sleep-chips">
-        <button class="chip" onclick="openQuickPlace()">${place.ico} ${place.label} ✎</button>
-        ${wakesN ? `<button class="chip" onclick="openSleepForm('${cur.id}')">👁️ ${wakesN} ${wakesN === 1 ? 'risveglio breve' : 'risvegli brevi'} ✎</button>` : ''}
-      </div>`;
-    if (pd) {
-      h += `<div class="sleep-sub tappable" onclick="openPutdownEdit('${pd.id}')">Posato alle ${fmtTime(pd.ts)} (dopo ${pd.data.after_min} min) ✎. Se si sveglia, tocca «Si è svegliato».</div>`;
-    }
-    if (cur.data.place === 'bed') {
-      h += `<div class="sleep-sub">Nel lettone: niente cuscini o coperte vicino a lui e, se puoi, rimettilo nel suo spazio appena possibile.</div>`;
-    }
-    h += `<button class="sleep-main-btn wake" onclick="sleepWake()">☀️ Si è svegliato</button>
-      <div class="sleep-actions">
-        <button onclick="openPutdownSheet()">🛏️ L'ho posato</button>
-        <button onclick="sleepBriefWake()">👁️ Risveglio breve</button>
-      </div>`;
-  } else {
-    const lastEnd = lastWakeTs(child.id);
-    h += `<div class="sleep-top"><div class="sleep-state-lbl">☀️ Sveglio${lastEnd ? ` da <span class="js-sleep-tick" data-fmt="dur" data-since="${lastEnd}">${fmtDur((now - lastEnd) / MIN_MS)}</span>` : ''}</div>
-      ${lastEnd ? `<button class="sleep-edit" onclick="openQuickTime('wake')">modifica</button>` : ''}</div>`;
-
-    const pred = predictNextSleep(child, now);
-    if (pred.kind === 'ok') {
-      const st = napStatus(pred.start, pred.end, now);
-      const scale = pred.hi * 1.3 * MIN_MS;
-      const pct = pctClamp((now - pred.lastEnd) / scale * 100);
-      const bandL = pred.lo / (pred.hi * 1.3) * 100, bandW = (pred.hi - pred.lo) / (pred.hi * 1.3) * 100;
-      h += `<div class="sleep-next ${st.cls} js-sleep-next" data-start="${pred.start}" data-end="${pred.end}" data-since="${pred.lastEnd}" data-scale="${scale}">
-          <div class="sn-big js-sn-big">${escapeHtml(st.big)}</div>
-          <div class="sn-small js-sn-small">${escapeHtml(st.small)}</div>
-          <div class="sbar awake"><i class="js-awake-fill" style="width:${Math.max(2, pct).toFixed(1)}%"></i><b class="sband" style="left:${bandL.toFixed(1)}%;width:${bandW.toFixed(1)}%"></b></div>
-          <div class="sbar-labels"><span><button class="link-btn" onclick="openQuickTime('wake')">risveglio ${fmtTime(pred.lastEnd)} ✎</button></span><span>fascia ${pred.lo}-${pred.hi} min di veglia</span></div>
-        </div>`;
-      h += `<div class="sleep-sub">${pred.personal
-        ? `Fascia tarata sui suoi ultimi ${pred.n} pisolini.`
-        : 'Fascia indicativa per questa età. Si affina da sola dopo qualche giorno di registrazioni.'}</div>`;
-    } else if (pred.kind === 'stale') {
-      h += `<div class="sleep-sub">Ultimo risveglio registrato alle ${fmtTime(pred.lastEnd)}. Se ha dormito dopo, aggiungilo con «+ sonno dimenticato».</div>`;
-    } else if (pred.kind === 'nodata') {
-      h += `<div class="sleep-sub">Segna il primo sonno: da lì calcolo la fascia del prossimo.</div>`;
-    }
-
-    h += `<div class="sleep-start-label">Si è addormentato…</div>
-      <div class="sleep-places">
-        ${SLEEP_PLACE_ORDER.map(k => `<button onclick="sleepStart('${k}')"><span class="sp-ico">${SLEEP_PLACES[k].ico}</span><span>${SLEEP_PLACES[k].short}</span></button>`).join('')}
-      </div>`;
-  }
-
-  h += renderDayBar(child, now, ref);
-
-  h += `<div class="sleep-foot">
-    <button onclick="openSleepForm()">+ sonno dimenticato</button>
-    ${!inPage ? `<button onclick="goTo('sonno')">Posamenti, orari e consigli ›</button>` : ''}
-  </div>`;
-  h += `</div>`;
-  return h;
-}
-
-/* ---------- RENDER: PAGINA SONNO ---------- */
-
-function renderSleepPage() {
-  const c = document.getElementById('sleepContent');
-  if (!c) return;
-  const child = getActiveChild();
-  if (!child) { c.innerHTML = renderEmptyHome(); return; }
-
-  let html = `<button class="back-link" onclick="goTo('home')">‹ Home</button>`;
-  html += renderChildSwitcher();
-  html += `<div class="hdr-block">
-    <div class="hdr-eyebrow">sonno</div>
-    <h1 class="hdr-title">${escapeHtml(child.name)}</h1>
-  </div>`;
-
-  if (!sleepEligible(child)) {
-    html += `<div class="empty-card"><div class="empty-text">Il registro del sonno è pensato per i bambini fino a 3 anni.</div></div>`;
-    c.innerHTML = html;
-    return;
-  }
-
-  const now = Date.now();
-  const months = sleepAgeMonths(child);
-  const ref = sleepTotalRefFor(months);
-  const ww = wakeWindowFor(months);
-  const real = ageOf(child.birth_date);
-  const usesCorrected = child.due_date && real.totalDays < 730 && correctedAge(child.birth_date, child.due_date);
-
-  html += renderSleepCard(child, true);
-
-  // Riferimenti per età
-  html += `<div class="card-eyebrow eb-spaced">per la sua età${usesCorrected ? ' (corretta)' : ''}</div>
-    <div class="sleep-ref">
-      <div><span class="sr-num">${ref.min}-${ref.max} h</span><span class="sr-lbl">sonno totale nelle 24 h</span></div>
-      ${ww ? `<div><span class="sr-num">${ww.min}-${ww.max} min</span><span class="sr-lbl">veglia tra un sonno e l'altro</span></div>
-      <div><span class="sr-num">${ww.naps}</span><span class="sr-lbl">pisolini al giorno</span></div>` : ''}
-    </div>
-    <div class="ev-hint" style="margin:6px 4px 0">Sono medie, non regole: l'età è quella corretta se è nato prematuro. Le finestre di veglia sono una guida di uso comune, non hanno una base scientifica forte.</div>`;
-
-  // Durata dei pisolini per posizione nella giornata
-  html += renderNapAveragesSection(child, now);
-
-  // Posamenti
-  html += renderPutdownSection(child, now);
-
-  // Dove dorme (7 giorni)
-  html += renderPlaceSection(child, now);
-
-  // Cosa aspettarti (fasi sul sonno)
-  const phases = (typeof getCurrentPhases === 'function') ? getCurrentPhases(child, 'sleep') : [];
-  if (phases.length) {
-    html += `<div class="card-eyebrow eb-spaced">cosa aspettarti sul sonno</div><div class="phase-list-wrap">`;
-    phases.forEach(p => { html += renderPhaseTeaser(p); });
-    html += `</div>`;
-  }
-
-  // Storico
-  html += renderSleepHistory(child, now);
-
-  html += `<div class="phase-flag" style="margin-top:22px"><strong>Quando chiamare il pediatra —</strong> respiro affannoso o con pause lunghe, colorito pallido o bluastro, pianto inconsolabile e diverso dal solito, vomito ripetuto, difficoltà a svegliarlo per mangiare, febbre (sotto i 3 mesi anche 38 °C va valutata subito). Se non risponde o è bluastro, chiama il 112.</div>`;
-  html += `<div class="ev-hint" style="margin:10px 4px 0">Sicurezza del sonno (AAP): sempre a pancia in su, su superficie piana e rigida, senza cuscini o peluche. Se si addormenta in fascia o in braccio, spostalo appena puoi. Mai addormentarsi con lui su divano o poltrona. Nel lettone l'AAP sconsiglia di dormire insieme nei primi mesi e nei nati prematuri: il rischio è più alto sotto i 4 mesi ed è molto più alto se un adulto ha bevuto alcol, preso farmaci che appesantiscono il sonno o fuma. La soluzione che l'AAP indica è tenere il suo spazio vicino al vostro letto (stanza condivisa, letto separato) per almeno 6 mesi.</div>`;
-
-  c.innerHTML = html;
-}
-
-function renderNapAveragesSection(child, now) {
-  const rows = napAveragesByIndex(child.id, now).filter(r => r.n >= 2);
-  if (!rows.length) return '';
-  const max = Math.max(...rows.map(r => r.avg));
-  let h = `<div class="card-eyebrow eb-spaced">durata dei pisolini · ultimi 7 giorni</div><div class="sleep-panel"><div class="pd-table">`;
-  rows.forEach(r => {
-    h += `<div class="pd-row wide"><span class="pd-lbl">${r.idx}° · ${r.n} volte</span><span class="pd-bar"><i style="width:${Math.round(100 * r.avg / max)}%"></i></span><span class="pd-val">${fmtDur(r.avg)}</span></div>`;
-  });
-  h += `</div><div class="ev-hint">Il numero è la posizione nella giornata. Se un pisolino non viene segnato, quelli dopo si spostano: puoi recuperarlo con «+ sonno».</div></div>`;
-  return h;
-}
-
-function renderPutdownSection(child, now) {
-  const pds = putdownsFor(child.id).map(p => ({ p, res: putdownResult(p, now) }));
-  const bedN = pds.filter(x => x.p.data.place === 'bed').length;
-  const resolved = pds.filter(x => (x.res === 'stayed' || x.res === 'woke') && x.p.data.place !== 'bed');
-  const stayed = resolved.filter(x => x.res === 'stayed').length;
-
-  let h = `<div class="card-eyebrow eb-spaced">posarlo senza svegliarlo</div><div class="sleep-panel">`;
-
-  if (resolved.length === 0) {
-    h += `<div class="sp-text">Quando si addormenta in braccio, tocca «L'ho posato» al momento giusto: segno dopo quanti minuti l'hai fatto e come è andata. Dopo una decina di tentativi vedi quando ha più probabilità di restare giù.</div>`;
-  } else {
-    h += `<div class="sp-text"><strong>${stayed} su ${resolved.length}</strong> posamenti riusciti (restava giù almeno ${PUTDOWN_STAY_MIN} min).</div>`;
-
-    const buckets = [
-      { label: 'meno di 10 min', a: 0, b: 10 },
-      { label: '10-14 min', a: 10, b: 15 },
-      { label: '15-19 min', a: 15, b: 20 },
-      { label: '20-29 min', a: 20, b: 30 },
-      { label: '30 min o più', a: 30, b: 1e9 }
-    ].map(bk => {
-      const list = resolved.filter(x => x.p.data.after_min >= bk.a && x.p.data.after_min < bk.b);
-      return Object.assign(bk, { n: list.length, ok: list.filter(x => x.res === 'stayed').length });
-    });
-    h += `<div class="pd-table">`;
-    buckets.forEach(bk => {
-      if (!bk.n) return;
-      const pct = Math.round(100 * bk.ok / bk.n);
-      h += `<div class="pd-row"><span class="pd-lbl">dopo ${bk.label}</span><span class="pd-bar"><i style="width:${pct}%"></i></span><span class="pd-val">${bk.ok}/${bk.n}</span></div>`;
-    });
-    h += `</div>`;
-
-    if (resolved.length >= 8) {
-      const cands = buckets.filter(bk => bk.n >= 3).sort((x, y) => (y.ok / y.n) - (x.ok / x.n) || y.n - x.n);
-      if (cands.length) {
-        const best = cands[0];
-        h += `<div class="sp-insight">Finora funziona meglio posarlo <strong>dopo ${best.label}</strong> (${best.ok} su ${best.n}). Sono pochi dati: prendilo come indicazione, non come regola.</div>`;
-      }
-    } else {
-      h += `<div class="ev-hint">Ancora pochi tentativi (${resolved.length}): ne servono almeno 8 per un'indicazione.</div>`;
-    }
-  }
-
-  if (bedN > 0) {
-    h += `<div class="ev-hint">I posamenti nel lettone (${bedN}) restano nell'elenco ma non entrano nelle percentuali, che servono a capire il lettino.</div>`;
-  }
-
-  const recent = pds.slice(0, 6);
-  if (recent.length) {
-    h += `<div class="pd-list">`;
-    recent.forEach(({ p, res }) => {
-      const resTxt = { stayed: '✓ resta giù', woke: '✗ si è svegliato', pending: '… in corso', unknown: '?' }[res];
-      const where = (SLEEP_PLACES[p.data.place] || SLEEP_PLACES.other).ico;
-      h += `<button class="pd-item ${res}" onclick="openPutdownEdit('${p.id}')">
-        <span>${fmtDateShort(new Date(p.ts))} ${fmtTime(p.ts)} · dopo ${p.data.after_min} min ${where}</span><span>${resTxt}</span></button>`;
-    });
-    h += `</div>`;
-  }
-
-  h += `<details class="sleep-tips"><summary>Come posarlo: consigli</summary><ul class="phase-list">`;
-  PUTDOWN_TIPS.forEach(t => { h += `<li>${escapeHtml(t)}</li>`; });
-  h += `</ul>
-    <div class="ev-hint">Sono consigli comuni, non garanzie: per questo li misuriamo sui vostri tentativi.</div>
-    </details></div>`;
-  return h;
-}
-
-function renderPlaceSection(child, now) {
-  const from = now - 7 * DAY_MS;
-  const mins = { arms: 0, carrier: 0, crib: 0, bed: 0, other: 0 };
-  let total = 0;
-  sleepSessions(child.id).forEach(e => {
-    const s = Math.max(e.ts, from);
-    const en = sleepEndTs(e);
-    const t = Math.min(en != null ? en : now, now);
-    if (t <= s) return;
-    const m = (t - s) / MIN_MS;
-    const k = mins[e.data.place] != null ? e.data.place : 'other';
-    mins[k] += m; total += m;
-  });
-  if (total < 60) return '';
-  let h = `<div class="card-eyebrow eb-spaced">dove ha dormito · ultimi 7 giorni</div><div class="sleep-panel"><div class="pd-table">`;
-  SLEEP_PLACE_ORDER.forEach(k => {
-    if (!mins[k]) return;
-    const pct = Math.round(100 * mins[k] / total);
-    h += `<div class="pd-row"><span class="pd-lbl">${SLEEP_PLACES[k].ico} ${SLEEP_PLACES[k].short}</span><span class="pd-bar"><i style="width:${pct}%"></i></span><span class="pd-val">${pct}%</span></div>`;
-  });
-  h += `</div><div class="ev-hint">Serve a vedere i progressi verso il lettino, settimana dopo settimana.</div></div>`;
-  return h;
-}
-
-function renderSleepHistory(child, now) {
-  const from = now - 14 * DAY_MS;
-  const list = sleepSessions(child.id).filter(e => e.ts >= from).sort((a, b) => b.ts - a.ts);
-  let h = `<div class="card-eyebrow eb-spaced">ultimi sonni</div>
-    <button class="diary-add-btn sleep-add" onclick="openSleepForm()">+ sonno (a mano)</button>`;
-  if (!list.length) {
-    return h + `<div class="empty-card" style="margin-top:10px"><div class="empty-text">Ancora niente. Usa i tasti qui sopra, oppure aggiungi un sonno a mano.</div></div>`;
-  }
-  const byDay = {};
-  list.forEach(e => { (byDay[dateOf(e.ts)] = byDay[dateOf(e.ts)] || []).push(e); });
-  Object.keys(byDay).sort((a, b) => b.localeCompare(a)).forEach(dayKey => {
-    const items = byDay[dayKey];
-    const dayMin = items.reduce((s, e) => {
-      const en = sleepEndTs(e);
-      return s + ((en != null ? en : now) - e.ts) / MIN_MS;
-    }, 0);
-    let label = fmtDateLong(parseDateStr(dayKey));
-    if (dayKey === todayStr()) label = 'oggi';
-    else if (dayKey === dateOf(now - DAY_MS)) label = 'ieri';
-    h += `<div class="tk-day-eyebrow">${label} · ${fmtDur(dayMin)}</div>`;
-    items.forEach(e => {
-      const en = sleepEndTs(e);
-      const place = SLEEP_PLACES[e.data.place] || SLEEP_PLACES.other;
-      const wakesN = (e.data.wakes || []).length;
-      const wakeTimes = (e.data.wakes || []).filter(Boolean).map(fmtTime).join(', ');
-      h += `<div class="tk-row" onclick="openSleepForm('${e.id}')">
-        <div class="tk-row-icon">${sleepType(e) === 'night' ? '🌙' : '😴'}</div>
-        <div class="tk-row-body">
-          <div class="tk-row-head">
-            <span class="tk-row-label">${fmtTime(e.ts)} → ${en != null ? fmtTime(en) : 'in corso'}</span>
-            <span class="tk-row-time">${fmtDur(((en != null ? en : now) - e.ts) / MIN_MS)}</span>
-          </div>
-          <div class="tk-row-desc">${place.ico} ${place.short}${wakesN ? ` · ${wakesN} ${wakesN === 1 ? 'risveglio breve' : 'risvegli brevi'}${wakeTimes ? ' (' + wakeTimes + ')' : ''}` : ''}</div>
-          ${e.note ? `<div class="tk-row-note">"${escapeHtml(e.note)}"</div>` : ''}
-        </div>
-      </div>`;
-    });
-  });
-  return h;
-}
-
-/* ---------- AGGIORNAMENTO VISTE + TIMER ---------- */
-
-function renderSleepPageIfActive() {
-  if (document.getElementById('sec-sonno')?.classList.contains('active')) renderSleepPage();
-}
-function refreshSleepViews() {
-  if (document.getElementById('sec-home')?.classList.contains('active')) renderHome();
-  renderSleepPageIfActive();
-}
-
-/* Aggiorna solo testi e larghezze (mai i bottoni: ridisegnarli mentre li tocchi fa perdere i tap) */
-let _sleepTickN = 0;
-
-function updateNextBlock(el, now) {
-  const start = Number(el.dataset.start), end = Number(el.dataset.end);
-  const since = Number(el.dataset.since), scale = Number(el.dataset.scale);
-  const st = napStatus(start, end, now);
-  el.className = 'sleep-next ' + st.cls + ' js-sleep-next';
-  const big = el.querySelector('.js-sn-big'), small = el.querySelector('.js-sn-small'), fill = el.querySelector('.js-awake-fill');
-  if (big) big.textContent = st.big;
-  if (small) small.textContent = st.small;
-  if (fill) fill.style.width = Math.max(2, pctClamp((now - since) / scale * 100)).toFixed(1) + '%';
-}
-
-function updateDayBar(el, now) {
-  const child = getChild(el.dataset.child);
-  if (!child) return;
-  const ref = { min: Number(el.dataset.min), max: Number(el.dataset.max) };
-  const tot = sleepTotals(child.id, now);
-  const m = dayBarModel(tot.total, ref, tot.complete);
-  const val = el.querySelector('.js-day-val'), fill = el.querySelector('.js-day-fill'), note = el.querySelector('.js-day-note');
-  if (val) val.textContent = fmtDur(tot.total);
-  if (fill) fill.style.width = m.fill.toFixed(1) + '%';
-  if (note) {
-    note.textContent = m.verdict ? m.verdict.text : 'Il confronto parte dopo un giorno intero di registrazioni';
-    note.className = 'sd-note js-day-note ' + (m.verdict ? m.verdict.cls : '');
-  }
-}
-
-function sleepTick() {
-  if (document.hidden) return;
-  const now = Date.now();
-  _sleepTickN++;
-  document.querySelectorAll('.js-sleep-tick').forEach(el => {
-    const since = Number(el.dataset.since);
-    el.textContent = el.dataset.fmt === 'timer' ? fmtElapsed(now - since) : fmtDur((now - since) / MIN_MS);
-  });
-  document.querySelectorAll('.js-sleep-next').forEach(el => updateNextBlock(el, now));
-  document.querySelectorAll('.js-nap-fill').forEach(el => {
-    const since = Number(el.dataset.since), full = Number(el.dataset.full);
-    el.style.width = Math.max(2, pctClamp((now - since) / full * 100)).toFixed(1) + '%';
-    el.classList.toggle('over', now - since >= full);
-  });
-  if (_sleepTickN % 15 === 0) document.querySelectorAll('.js-sleep-day').forEach(el => updateDayBar(el, now));
-}
-setInterval(sleepTick, 1000);

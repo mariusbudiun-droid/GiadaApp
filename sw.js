@@ -1,6 +1,6 @@
 /* Kin - Service Worker con auto-update silenzioso */
 'use strict';
-const CACHE_VERSION = 'kin-v055';
+const CACHE_VERSION = 'kin-v061';
 const ASSETS = [
   './',
   './index.html',
@@ -29,6 +29,7 @@ const ASSETS = [
   './js-phases.js',
   './js-photos.js',
   './js-settings.js',
+  './js-sleep-ui.js',
   './js-sleep.js',
   './js-sync.js',
   './js-teeth.js',

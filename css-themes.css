@@ -28,6 +28,17 @@
   --alert-bg: #FAE4DE;
 
   --shadow: 0 2px 8px rgba(44, 62, 80, 0.06);
+
+  /* sonno */
+  --sl-night: #3B4A7A;            /* blocchi notte */
+  --sl-night-bg-a: #34447A;       /* scheda notte */
+  --sl-night-bg-b: #1F2A4F;
+  --sl-night-text: #E9ECF8;
+  --sl-glass: rgba(255, 255, 255, 0.13);
+  --sl-glass-line: rgba(255, 255, 255, 0.2);
+  --sl-pz-fill: rgba(255, 255, 255, 0.42);
+  --sl-hatch: rgba(255, 255, 255, 0.85);
+  --sl-dark-band: rgba(59, 74, 122, 0.08);
 }
 
 /* ---------- DARK ---------- */
@@ -49,6 +60,17 @@
   --alert-bg: #4A2822;
 
   --shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
+
+  /* sonno */
+  --sl-night: #7C8FD6;
+  --sl-night-bg-a: #2B375F;
+  --sl-night-bg-b: #1B2444;
+  --sl-night-text: #E9ECF8;
+  --sl-glass: rgba(255, 255, 255, 0.12);
+  --sl-glass-line: rgba(255, 255, 255, 0.18);
+  --sl-pz-fill: rgba(23, 31, 42, 0.38);
+  --sl-hatch: rgba(23, 31, 42, 0.8);
+  --sl-dark-band: rgba(255, 255, 255, 0.04);
 }
 
 /* ---------- NOTTE (vera, rosso su nero — non abbaglia durante le poppate) ---------- */
@@ -70,4 +92,15 @@
   --alert-bg: #3a1010;
 
   --shadow: none;
+
+  /* sonno */
+  --sl-night: #8a2a2a;
+  --sl-night-bg-a: #2a0a0a;
+  --sl-night-bg-b: #140505;
+  --sl-night-text: #e05a5a;
+  --sl-glass: rgba(224, 90, 90, 0.1);
+  --sl-glass-line: rgba(224, 90, 90, 0.25);
+  --sl-pz-fill: rgba(0, 0, 0, 0.45);
+  --sl-hatch: rgba(0, 0, 0, 0.85);
+  --sl-dark-band: rgba(255, 255, 255, 0.03);
 }
