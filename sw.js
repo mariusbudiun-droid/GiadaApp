@@ -1,6 +1,6 @@
 /* Kin - Service Worker con auto-update silenzioso */
 'use strict';
-const CACHE_VERSION = 'kin-v061';
+const CACHE_VERSION = 'kin-v062';
 const ASSETS = [
   './',
   './index.html',

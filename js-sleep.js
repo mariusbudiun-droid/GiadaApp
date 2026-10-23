@@ -241,15 +241,6 @@ function personalWakeWindows(childId, now) {
   return out;
 }
 
-function averageNapMin(childId, now) {
-  const from = now - 7 * DAY_MS;
-  const durs = sleepSessions(childId)
-    .filter(e => sleepEndTs(e) != null && e.ts >= from && sleepType(e) === 'nap')
-    .map(e => sleepNetMin(e))
-    .filter(m => m >= 5 && m <= 240);
-  return durs.length >= 3 ? durs.reduce((a, b) => a + b, 0) / durs.length : null;
-}
-
 /* I pisolini della giornata numerati in ordine: 1°, 2°, 3°... (giorno di calendario) */
 function napsByDayIndexed(childId) {
   const naps = sleepSessions(childId).filter(e => sleepType(e) === 'nap');
@@ -261,9 +252,11 @@ function napsByDayIndexed(childId) {
   });
 }
 
-/* Durata media del 1°, 2°, 3°... pisolino negli ultimi 7 giorni */
+/* Durata media (effettiva) del 1°, 2°, 3°... pisolino negli ultimi 14 giorni:
+   ogni posizione ha la sua media, mai una media di tutti i pisolini insieme */
+const NAP_AVG_DAYS = 14;
 function napAveragesByIndex(childId, now) {
-  const from = now - 7 * DAY_MS;
+  const from = now - NAP_AVG_DAYS * DAY_MS;
   const groups = {};
   napsByDayIndexed(childId).forEach(r => {
     const en = sleepEndTs(r.ev);
@@ -316,24 +309,32 @@ function napStatus(startTs, endTs, now) {
   return { cls: 'late', kicker: 'finestra superata', big: '+' + fmtDur(late), small: `da ${fmtTime(endTs)}`, advice: 'Se è già agitato, prova subito a calmarlo e a farlo dormire.' };
 }
 
-/* Durata "tipica" del pisolino in corso. In ordine di preferenza:
-   1) la media dei suoi pisolini nella STESSA posizione della giornata (1°, 2°, 3°...),
-      se ne ha almeno 3 negli ultimi 7 giorni
-   2) la media di tutti i suoi pisolini, se sono almeno 3
-   3) una stima dai riferimenti per età (indicativa).  Tutto in minuti di sonno EFFETTIVO. */
+/* Durata "tipica" del pisolino in corso: la media dei SUOI pisolini nella STESSA posizione
+   della giornata (1°, 2°, 3°...), anche con pochi dati (n lo dice).
+   Se per quella posizione non c'è ancora nessun dato: stima dai riferimenti per età.
+   Non si usa mai la media di tutti i pisolini insieme. Minuti di sonno EFFETTIVO. */
 function typicalNapMin(child, now, cur) {
   const r5 = m => Math.max(5, Math.round(m / 5) * 5);
+  let idx = null;
   if (cur) {
     const me = napsByDayIndexed(child.id).find(x => x.ev.id === cur.id);
     if (me) {
+      idx = me.idx;
       const row = napAveragesByIndex(child.id, now).find(x => x.idx === me.idx);
-      if (row && row.n >= 3) return { min: r5(row.avg), kind: 'index', idx: me.idx };
+      if (row && row.n >= 1) return { min: r5(row.avg), kind: 'index', idx: me.idx, n: row.n };
     }
   }
-  const avg = averageNapMin(child.id, now);
-  if (avg) return { min: r5(avg), kind: 'all' };
   const ww = wakeWindowFor(sleepAgeMonths(child));
-  return ww ? { min: ww.napMin, kind: 'ref' } : null;
+  return ww ? { min: ww.napMin, kind: 'ref', idx } : null;
+}
+
+/* Il prossimo pisolino di oggi sarà il N°: cosa dicono i suoi N° pisolini passati */
+function nextNapInfo(child, now) {
+  const today = dateOf(now);
+  const done = napsByDayIndexed(child.id).filter(r => dateOf(r.ev.ts) === today).length;
+  const idx = done + 1;
+  const row = napAveragesByIndex(child.id, now).find(x => x.idx === idx) || null;
+  return { idx, row };
 }
 
 /* Durata media (effettiva) delle sue notti, ultimi 14 giorni, se ne ha almeno 3 */

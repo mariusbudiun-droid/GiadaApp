@@ -107,6 +107,13 @@ function renderHeroAwake(child, now) {
     else if (pred.kind === 'nodata') h += `<div class="sl-note">Segna il primo sonno: da lì calcolo la fascia del prossimo.</div>`;
   }
 
+  if (sel === 'nap') {
+    const nx = nextNapInfo(child, now);
+    if (nx.row) {
+      h += `<div class="sl-note">Sarà il ${nx.idx}° pisolino di oggi: i suoi ${nx.idx}° durano di solito ~${fmtDur(nx.row.avg)} (su ${nx.row.n} ${nx.row.n === 1 ? 'volta' : 'volte'}).</div>`;
+    }
+  }
+
   h += `<div class="sl-start ${sel === 'night' ? 'is-night' : ''}">
       <div class="sl-seg" role="group" aria-label="Tipo di sonno">
         <button class="${sel === 'nap' ? 'on' : ''}" onclick="setSleepTypeSel('nap')">☀️ Pisolino</button>
@@ -139,7 +146,9 @@ function renderHeroSleeping(child, cur, now) {
     const typ = typicalNapMin(child, now, cur);
     if (typ) {
       fullMin = typ.min;
-      fullLbl = (typ.kind === 'index' ? `media dei suoi ${typ.idx}° pisolini` : (typ.kind === 'all' ? 'media dei suoi pisolini' : 'pisolino tipico per l\'età')) + `: ~${fmtDur(typ.min)}`;
+      fullLbl = typ.kind === 'index'
+        ? `media dei suoi ${typ.idx}° pisolini (su ${typ.n} ${typ.n === 1 ? 'volta' : 'volte'}): ~${fmtDur(typ.min)}`
+        : `${typ.idx ? 'ancora nessun ' + typ.idx + '° pisolino registrato: ' : ''}tipico per l\'età ~${fmtDur(typ.min)}`;
     }
   }
   const full = fullMin * MIN_MS;
@@ -301,8 +310,10 @@ function statsInner(child, now) {
     : 'senza pause';
 
   const nightSub = N.count ? pauseTxt(N) : 'nessuna notte registrata';
+  const napList = napsByDayIndexed(child.id).filter(r => sleepNetMin(r.ev, now - DAY_MS, now, now) > 0)
+    .slice(-4).map(r => `${r.idx}° ${fmtDur(sleepNetMin(r.ev, null, null, now))}${sleepEndTs(r.ev) == null ? '…' : ''}`).join(' · ');
   const napSub = P.count
-    ? `${P.count} ${P.count === 1 ? 'pisolino' : 'pisolini'} · media ${fmtDur(P.min / P.count)}${P.pauseN ? ' · ' + P.pauseN + (P.pauseN === 1 ? ' pausa' : ' pause') : ''}`
+    ? `${P.count} ${P.count === 1 ? 'pisolino' : 'pisolini'}${napList ? ': ' + napList : ''}${P.pauseN ? ' · ' + P.pauseN + (P.pauseN === 1 ? ' pausa' : ' pause') : ''}`
     : 'nessun pisolino registrato';
 
   const scale = ref.max + 2;
@@ -329,15 +340,15 @@ function renderStats(child, now) {
 /* ---------- SEZIONI ---------- */
 
 function renderNapAveragesSection(child, now) {
-  const rows = napAveragesByIndex(child.id, now).filter(r => r.n >= 2);
+  const rows = napAveragesByIndex(child.id, now);
   if (!rows.length) return '';
   const max = Math.max(...rows.map(r => r.avg));
-  let h = `<div class="card-eyebrow eb-spaced">durata dei pisolini · ultimi 7 giorni</div><div class="sleep-panel">
+  let h = `<div class="card-eyebrow eb-spaced">durata dei pisolini per posizione · ultimi ${NAP_AVG_DAYS} giorni</div><div class="sleep-panel">
     <div class="sl-cols">`;
   rows.forEach(r => {
     h += `<div class="sl-col"><span class="sl-col-v">${fmtDur(r.avg)}</span><span class="sl-col-bar"><i style="height:${Math.max(8, Math.round(100 * r.avg / max))}%"></i></span><span class="sl-col-l">${r.idx}°</span><span class="sl-col-n">×${r.n}</span></div>`;
   });
-  h += `</div><div class="ev-hint">Tempo effettivo (pause escluse). Il numero è la posizione nella giornata: se un pisolino non viene segnato, quelli dopo si spostano, recuperalo con «+ sonno dimenticato».</div></div>`;
+  h += `</div><div class="ev-hint">Tempo effettivo (pause escluse). Ogni colonna è la media dei suoi 1°, 2°, 3°… pisolini (×N = quante volte). Se un pisolino non viene segnato, quelli dopo si spostano: recuperalo con «+ sonno dimenticato».</div></div>`;
   return h;
 }
 
